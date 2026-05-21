@@ -1,0 +1,185 @@
+{
+  "id": "2024-ironglass-soviet-mkii",
+  "slug": "2024-ironglass-soviet-mkii",
+  "fileName": "2024-ironglass-soviet-mkii.json",
+  "name": "IronGlass Soviet Rehoused MKII",
+  "manufacturer": "IronGlass Adapters / Iron Glass",
+  "yearIntroduced": 2024,
+  "yearApproximate": true,
+  "productionYears": "MKII rehousing generation active in the 2020s; based on much older Soviet still-photography donor optics.",
+  "country": "Ukraine",
+  "factoryLocation": "Ukraine",
+  "type": [
+    "prime",
+    "spherical",
+    "vintage",
+    "rehoused-cine",
+    "soviet",
+    "full-frame-stills-derived",
+    "character-lens"
+  ],
+  "importance": "important",
+  "timelineCategory": "Modern rehoused vintage primes",
+  "era": "2020s",
+  "cardLabel": "Modern rehoused Soviet character primes",
+  "publicSummary": "IronGlass Soviet Rehoused MKII lenses turn Soviet still-photography optics like Mir, Helios, Jupiter and Tair into modern cine-style lenses with PL-mount mechanics, unified fronts, T-stop markings and a strong painterly character.",
+  "coverage": "Stills-derived optics; commonly treated as full-frame capable, but exact usable image circle and corner behavior vary by donor lens, copy, focus distance and rehousing.",
+  "mounts": [
+    "PL mount",
+    "LPL/EF options depending on custom order or adapter system"
+  ],
+  "focalLengths": [
+    "20mm",
+    "28mm",
+    "37mm",
+    "50mm",
+    "58mm",
+    "85mm",
+    "135mm"
+  ],
+  "tStops": [
+    "20mm T3.6",
+    "28mm T3.6",
+    "37mm T2.9",
+    "50mm T2.1",
+    "58mm T2.1",
+    "85mm T2.1",
+    "135mm T2.9"
+  ],
+  "closeFocus": [
+    "Improved close focus compared with original stills mechanics; exact values vary by focal length, donor and rehousing batch. Verify copy-specific values before publication."
+  ],
+  "focalLengthSpecs": [
+    {
+      "focalLength": "20mm",
+      "donorLens": "MIR-20M",
+      "maxAperture": "T3.6",
+      "frontDiameter": "95mm",
+      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
+      "notes": "CVP 7-lens MKII set."
+    },
+    {
+      "focalLength": "28mm",
+      "donorLens": "MIR-10A",
+      "maxAperture": "T3.6",
+      "frontDiameter": "95mm",
+      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
+      "notes": ""
+    },
+    {
+      "focalLength": "37mm",
+      "donorLens": "MIR-1B",
+      "maxAperture": "T2.9",
+      "frontDiameter": "95mm",
+      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
+      "notes": ""
+    },
+    {
+      "focalLength": "50mm",
+      "donorLens": "Helios 77M-4",
+      "maxAperture": "T2.1",
+      "frontDiameter": "95mm",
+      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
+      "notes": "Not present in every Soviet MKII set."
+    },
+    {
+      "focalLength": "58mm",
+      "donorLens": "Helios 44-2",
+      "maxAperture": "T2.1",
+      "frontDiameter": "95mm",
+      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
+      "notes": "Signature swirly-bokeh focal length."
+    },
+    {
+      "focalLength": "85mm",
+      "donorLens": "Jupiter-9",
+      "maxAperture": "T2.1",
+      "frontDiameter": "95mm",
+      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
+      "notes": "Some rental sets swap this for Helios 40-2 85mm."
+    },
+    {
+      "focalLength": "135mm",
+      "donorLens": "Tair-11A",
+      "maxAperture": "T2.9",
+      "frontDiameter": "95mm",
+      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
+      "notes": ""
+    }
+  ],
+  "coating": "Vintage Soviet coatings; internal coating options may vary by rehousing/custom order.",
+  "designFamily": "Rehoused Soviet still-photography optics: Mir, Helios, Jupiter, Tair and related designs.",
+  "donorLens": "MIR-20M, MIR-10A, MIR-1B, Helios 77M-4, Helios 44-2, Jupiter-9, Tair-11A and related Soviet optics depending on set.",
+  "rehousingInfo": "MKII uses redesigned cine mechanics with internal/hybrid focus, universal gear positions, shimmable PL mount, 15-blade iris, T-stop markings and a 95mm front in common 7-lens sets.",
+  "lookSummary": "Painterly, organic and imperfect: sharp center with gentle edge falloff, swirly bokeh, lower contrast, warm/rich tones and very expressive flares.",
+  "characteristics": [
+    "Swirly bokeh",
+    "Dreamy flares",
+    "Sharp center with edge falloff",
+    "Lower contrast than modern primes",
+    "Painterly texture",
+    "Strong copy-to-copy variation",
+    "Modern cine mechanics over vintage donor glass"
+  ],
+  "strengths": [
+    "Huge character per euro compared with major-brand vintage sets",
+    "Modern rehousing makes Soviet optics practical on set",
+    "Strong association with recent high-end blockbuster texture",
+    "Great for music videos, stylized drama and dirty/organic digital images"
+  ],
+  "weaknesses": [
+    "Not optically uniform like modern matched primes",
+    "Focal lengths and donors vary by set",
+    "Exact specs can differ by batch/custom options",
+    "Project Hail Mary credit currently needs verification",
+    "Can flare or fall apart too much for clean commercial work"
+  ],
+  "famousUses": [
+    {
+      "title": "The Batman",
+      "year": 2022,
+      "role": "Rehoused Soviet-era / Iron Glass lenses for car-chase/crash-camera work",
+      "confidence": "high",
+      "notes": "ASC and Motion Picture Association interviews mention rehoused Ukrainian/Iron Glass Soviet lenses used for the chase sequence."
+    },
+    {
+      "title": "Dune: Part Two",
+      "year": 2024,
+      "role": "IronGlass x VLFV MKII / rehoused Soviet-era lenses",
+      "confidence": "high",
+      "notes": "IronGlass and industry coverage cite Greig Fraser using IronGlass Soviet glass for texture."
+    },
+    {
+      "title": "Project Hail Mary",
+      "year": 2026,
+      "role": "User-supplied / unverified IronGlass credit",
+      "confidence": "needs verification",
+      "notes": "Public sources found so far emphasize ARRI Rental custom vertical anamorphics plus Atlas Mercury and Viltrox Luna. Keep this marked unverified until a direct source confirms IronGlass."
+    }
+  ],
+  "sources": [
+    {
+      "label": "CVP – IRON GLASS Rehoused MKII 7 Lens Set specs",
+      "url": "https://cvp.com/product/iron-glass-rehoused-mkii-7-lens-set"
+    },
+    {
+      "label": "IronGlass – Dune: Part Two MKII article",
+      "url": "https://ironglassadapters.com/the-legacy-of-ironglass-x-vlfv-mkii-lenses-in-dune-part-two-2/"
+    },
+    {
+      "label": "American Cinematographer – The Batman optics spotlight",
+      "url": "https://theasc.com/article/greig-fraser-batman/"
+    },
+    {
+      "label": "Motion Picture Association – Greig Fraser on The Batman",
+      "url": "https://www.motionpictures.org/2022/03/the-batman-cinematographer-greig-fraser-on-finding-light-in-the-darkness/"
+    },
+    {
+      "label": "Newsshooter – ARRI Rental custom anamorphics for Project Hail Mary",
+      "url": "https://www.newsshooter.com/2026/03/20/arri-rentals-custom-set-of-anamorphic-lenses-for-project-hail-mary/"
+    }
+  ],
+  "confidence": "medium-high",
+  "libraryStatus": "ready",
+  "curationNotes": "Project Hail Mary is intentionally marked needs verification. Do not display it as confirmed until a better source is found."
+}

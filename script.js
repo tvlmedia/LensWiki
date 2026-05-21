@@ -740,14 +740,23 @@ function createFocalLengthSpecsSection(specs) {
       <td>${escapeHtml(spec.focalLength)}</td>
       <td>${escapeHtml(spec.series)}</td>
       <td>${escapeHtml(spec.maxAperture)}</td>
-      <td>${escapeHtml(spec.closeFocus)}</td>
+      <td>${escapeHtml(spec.closeFocus || spec.minimumMarkedObjectDistance)}</td>
       <td>${escapeHtml(spec.coverage)}</td>
-      <td>${escapeHtml(spec.notes)}</td>
+      <td>${escapeHtml(formatSpecNotes(spec))}</td>
     `;
     body.append(row);
   });
 
   return createDetailSection("Focal length specs", wrapper);
+}
+
+function formatSpecNotes(spec) {
+  return [
+    spec.donorLens ? `Donor: ${spec.donorLens}` : "",
+    spec.frontDiameter ? `Front: ${spec.frontDiameter}` : "",
+    spec.apertureRange ? `Range: ${spec.apertureRange}` : "",
+    spec.notes || ""
+  ].filter(Boolean).join(" · ");
 }
 
 function createYoutubeSection(urls) {

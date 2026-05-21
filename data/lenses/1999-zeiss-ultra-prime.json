@@ -1,0 +1,278 @@
+{
+  "id": "1999-zeiss-ultra-prime",
+  "slug": "1999-zeiss-ultra-prime",
+  "fileName": "1999-zeiss-ultra-prime.json",
+  "name": "ARRI/ZEISS Ultra Prime",
+  "manufacturer": "ARRI / ZEISS",
+  "yearIntroduced": 1999,
+  "yearApproximate": true,
+  "productionYears": "Late 1990s onward; long-running ARRI/ZEISS Super 35 workhorse set.",
+  "country": "Germany",
+  "type": [
+    "prime",
+    "spherical",
+    "cinema",
+    "super35",
+    "zeiss",
+    "arri-zeiss",
+    "modern-classic"
+  ],
+  "importance": "legendary",
+  "timelineCategory": "Modern cinema primes",
+  "era": "1990s",
+  "cardLabel": "Clean modern Super 35 workhorse prime family",
+  "publicSummary": "ARRI/ZEISS Ultra Primes became one of the defining standard-speed Super 35 prime sets of the late-film and early-digital era: compact, sharp, contrasty, well matched and reliable.",
+  "coverage": "Super 35 / 35mm motion-picture format. Not a full-frame lens family.",
+  "mounts": [
+    "PL mount"
+  ],
+  "focalLengths": [
+    "8R",
+    "10mm",
+    "12mm",
+    "14mm",
+    "16mm",
+    "20mm",
+    "24mm",
+    "28mm",
+    "32mm",
+    "40mm",
+    "50mm",
+    "65mm",
+    "85mm",
+    "100mm",
+    "135mm",
+    "180mm"
+  ],
+  "tStops": [
+    "Most focal lengths T1.9-T22",
+    "8R T2.8-T22",
+    "10mm T2.1-T22",
+    "12mm T2.0-T22"
+  ],
+  "closeFocus": [
+    "0.22m / 9in on 14mm through 2.60m / 8ft 6in on 180mm; measured from image plane in ARRI/ZEISS data."
+  ],
+  "focalLengthSpecs": [
+    {
+      "focalLength": "8R",
+      "maxAperture": "T2.8",
+      "apertureRange": "T2.8-T22",
+      "closeFocus": "0.35m / 14in",
+      "frontDiameter": "134mm",
+      "coverage": "Super 35",
+      "notes": "Rectilinear speciality ultra-wide."
+    },
+    {
+      "focalLength": "10mm",
+      "maxAperture": "T2.1",
+      "apertureRange": "T2.1-T22",
+      "closeFocus": "0.35m / 14in",
+      "frontDiameter": "156mm",
+      "coverage": "Super 35",
+      "notes": "Ultra-wide Distagon."
+    },
+    {
+      "focalLength": "12mm",
+      "maxAperture": "T2.0",
+      "apertureRange": "T2.0-T22",
+      "closeFocus": "0.30m / 12in",
+      "frontDiameter": "156mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "14mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "0.22m / 9in",
+      "frontDiameter": "114mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "16mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "0.25m / 10in",
+      "frontDiameter": "95mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "20mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "0.28m / 11in",
+      "frontDiameter": "95mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "24mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "0.30m / 12in",
+      "frontDiameter": "95mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "28mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "0.28m / 11in",
+      "frontDiameter": "95mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "32mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "0.35m / 14in",
+      "frontDiameter": "95mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "40mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "0.38m / 15in",
+      "frontDiameter": "95mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "50mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "0.60m / 2ft",
+      "frontDiameter": "95mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "65mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "0.65m / 2ft 3in",
+      "frontDiameter": "95mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "85mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "0.90m / 3ft",
+      "frontDiameter": "95mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "100mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "1.00m / 3ft 3in",
+      "frontDiameter": "95mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "135mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "1.50m / 5ft",
+      "frontDiameter": "95mm",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "180mm",
+      "maxAperture": "T1.9",
+      "apertureRange": "T1.9-T22",
+      "closeFocus": "2.60m / 8ft 6in",
+      "frontDiameter": "114mm",
+      "coverage": "Super 35",
+      "notes": ""
+    }
+  ],
+  "coating": "ZEISS T* anti-reflection coating",
+  "designFamily": "ARRI/ZEISS Ultra Prime Super 35 spherical primes",
+  "lookSummary": "Clean, sharp, neutral and contrasty with controlled flare, consistent color and reliable modern Zeiss rendering.",
+  "characteristics": [
+    "High contrast",
+    "High resolution",
+    "Clean Zeiss color",
+    "Compact Super 35 workhorse set",
+    "Excellent matching across focal lengths",
+    "Less characterful than warmer vintage lenses"
+  ],
+  "strengths": [
+    "Reliable production workhorse",
+    "Wide focal-length range",
+    "T1.9 on most lenses",
+    "Major feature-film track record",
+    "Pairs well with Master Primes"
+  ],
+  "weaknesses": [
+    "Not full-frame",
+    "Can feel too clean for projects wanting heavy vintage character",
+    "Specialty wides differ in speed and front diameter"
+  ],
+  "famousUses": [
+    {
+      "title": "The Lord of the Rings: The Fellowship of the Ring",
+      "year": 2001,
+      "role": "Zeiss Ultra Prime lenses",
+      "confidence": "high",
+      "notes": "Listed by ShotOnWhat; ARRI also references Ultra Primes on the trilogy."
+    },
+    {
+      "title": "The Lord of the Rings: The Two Towers",
+      "year": 2002,
+      "role": "Zeiss Ultra Prime lenses",
+      "confidence": "high",
+      "notes": "Listed by ShotOnWhat."
+    },
+    {
+      "title": "The Lord of the Rings: The Return of the King",
+      "year": 2003,
+      "role": "Zeiss Ultra Prime lenses",
+      "confidence": "high",
+      "notes": "Listed by ShotOnWhat."
+    },
+    {
+      "title": "Amélie",
+      "year": 2001,
+      "role": "Zeiss Ultra Prime lenses",
+      "confidence": "high",
+      "notes": "Listed by ShotOnWhat/IMDb technical data."
+    },
+    {
+      "title": "8 Mile",
+      "year": 2002,
+      "role": "Zeiss Ultra Prime lenses",
+      "confidence": "high",
+      "notes": "Listed by ShotOnWhat."
+    }
+  ],
+  "sources": [
+    {
+      "label": "ARRI – Ultra Prime technical data",
+      "url": "https://www.arri.com/en/cine-lenses/arri-zeiss-fujinon-lenses/legacy/ultra-prime-lenses/arri-ultra-prime-lenses-technical-data"
+    },
+    {
+      "label": "ZEISS – Ultra Prime lenses",
+      "url": "https://www.zeiss.com/photonics-and-optics/en/cinematography/lenses/ultra-prime-lenses.html"
+    },
+    {
+      "label": "ShotOnWhat – Zeiss Ultra Prime credits",
+      "url": "https://shotonwhat.com/lenses/zeiss-ultra-prime"
+    }
+  ],
+  "confidence": "high",
+  "libraryStatus": "ready"
+}

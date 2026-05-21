@@ -1,0 +1,264 @@
+{
+  "id": "1998-cooke-s4-i",
+  "slug": "1998-cooke-s4-i",
+  "fileName": "1998-cooke-s4-i.json",
+  "name": "Cooke S4/i",
+  "manufacturer": "Cooke Optics",
+  "yearIntroduced": 1998,
+  "yearApproximate": false,
+  "productionYears": "Introduced in 1998; /i Technology from 2005; discontinued after a long production run.",
+  "country": "United Kingdom",
+  "factoryLocation": "Leicester, England",
+  "type": [
+    "prime",
+    "spherical",
+    "cinema",
+    "super35",
+    "cooke",
+    "i-technology",
+    "modern-classic"
+  ],
+  "importance": "legendary",
+  "timelineCategory": "Modern cinema primes",
+  "era": "1990s",
+  "cardLabel": "The modern Cooke Look workhorse",
+  "publicSummary": "Cooke S4/i lenses became a modern cinema standard: warm, flattering, mechanically serious Super 35 T2 primes with /i metadata and the modern Cooke Look.",
+  "coverage": "Super 35 format.",
+  "mounts": [
+    "PL mount with /i Technology contacts"
+  ],
+  "focalLengths": [
+    "12, 14, 16, 18, 21, 25, 27, 32, 35, 40, 50, 65, 65SF, 75, 100, 135, 150, 180, 300mm"
+  ],
+  "tStops": [
+    "T2-T22 for most focal lengths",
+    "300mm T2.8-T22"
+  ],
+  "closeFocus": [
+    "See focalLengthSpecs for minimum marked object distance per lens."
+  ],
+  "focalLengthSpecs": [
+    {
+      "focalLength": "12mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "225mm / 9in",
+      "coverage": "Super 35",
+      "notes": "Official Cooke S4/i range."
+    },
+    {
+      "focalLength": "14mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "225mm / 9in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "16mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "225mm / 9in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "18mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "250mm / 9in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "21mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "250mm / 9in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "25mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "250mm / 9in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "27mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "250mm / 10in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "32mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "325mm / 12in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "35mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "350mm / 14in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "40mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "450mm / 16in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "50mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "550mm / 20in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "65mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "700mm / 27in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "65SFmm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "700mm / 27in",
+      "coverage": "Super 35",
+      "notes": "Special focus / close-focus variant."
+    },
+    {
+      "focalLength": "75mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "800mm / 30in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "100mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "950mm / 36in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "135mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "850mm / 33in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "150mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "1050mm / 42in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "180mm",
+      "maxAperture": "T2",
+      "apertureRange": "T2-T22",
+      "minimumMarkedObjectDistance": "1300mm / 51in",
+      "coverage": "Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "300mm",
+      "maxAperture": "T2.8",
+      "apertureRange": "T2.8-T22",
+      "minimumMarkedObjectDistance": "2100mm / 84in",
+      "coverage": "Super 35",
+      "notes": ""
+    }
+  ],
+  "coating": "Modern Cooke coatings designed for the Cooke Look with controlled flare and distortion.",
+  "designFamily": "Cooke S4 / S4/i Super 35 spherical primes",
+  "lookSummary": "Warm, dimensional and flattering with gentle contrast, attractive skin tones, smooth falloff and controlled but not sterile modern behavior.",
+  "characteristics": [
+    "Modern Cooke warmth",
+    "T2 Super 35 prime family",
+    "/i Technology metadata",
+    "Color-matched set",
+    "Controlled flare, distortion and spherical aberration",
+    "Not full-frame"
+  ],
+  "strengths": [
+    "Great balance of technical control and character",
+    "Widely trusted on major features",
+    "Strong mechanical consistency",
+    "Rich skin tones",
+    "Serious rental-market history"
+  ],
+  "weaknesses": [
+    "Super 35 only",
+    "Not as fast as T1.3/T1.4 sets",
+    "Too polished if heavy vintage defects are desired"
+  ],
+  "famousUses": [
+    {
+      "title": "Casino Royale",
+      "year": 2006,
+      "role": "Cooke S4/S4-i lenses",
+      "confidence": "high",
+      "notes": "Listed by ASC/ShotOnWhat."
+    },
+    {
+      "title": "The Grand Budapest Hotel",
+      "year": 2014,
+      "role": "Cooke S4 lenses among the package",
+      "confidence": "high",
+      "notes": "Listed by ShotOnWhat/IMDb."
+    },
+    {
+      "title": "John Wick",
+      "year": 2014,
+      "role": "Cooke S4 lenses with Hawk V-Lite Vintage '74",
+      "confidence": "high",
+      "notes": "Listed by ShotOnWhat/IMDb."
+    }
+  ],
+  "sources": [
+    {
+      "label": "Cooke Optics – S4/i Prime Lenses",
+      "url": "https://cookeoptics.com/lens/s4-i-prime/"
+    },
+    {
+      "label": "Cooke Optics – A tribute to Cooke S4",
+      "url": "https://cookeoptics.com/news-and-events/a-tribute-to-cooke-s4/"
+    },
+    {
+      "label": "ShotOnWhat – Casino Royale technical specifications",
+      "url": "https://shotonwhat.com/casino-royale-2006"
+    },
+    {
+      "label": "ShotOnWhat – The Grand Budapest Hotel technical specifications",
+      "url": "https://shotonwhat.com/the-grand-budapest-hotel-2014"
+    },
+    {
+      "label": "ShotOnWhat – John Wick technical specifications",
+      "url": "https://shotonwhat.com/john-wick-2014"
+    }
+  ],
+  "confidence": "high",
+  "libraryStatus": "ready"
+}

@@ -133,7 +133,19 @@
           "maxAperture": {
             "type": "string"
           },
+          "apertureRange": {
+            "type": "string"
+          },
           "closeFocus": {
+            "type": "string"
+          },
+          "minimumMarkedObjectDistance": {
+            "type": "string"
+          },
+          "frontDiameter": {
+            "type": "string"
+          },
+          "donorLens": {
             "type": "string"
           },
           "coverage": {

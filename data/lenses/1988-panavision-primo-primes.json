@@ -1,0 +1,266 @@
+{
+  "id": "1988-panavision-primo-primes",
+  "slug": "1988-panavision-primo-primes",
+  "fileName": "1988-panavision-primo-primes.json",
+  "name": "Panavision Primo Primes",
+  "manufacturer": "Panavision",
+  "yearIntroduced": 1988,
+  "yearApproximate": false,
+  "productionYears": "Introduced in 1988; still part of the Panavision rental ecosystem and expanded into Primo zoom, anamorphic and large-format descendants.",
+  "country": "United States",
+  "factoryLocation": "Woodland Hills, California, USA",
+  "type": [
+    "prime",
+    "spherical",
+    "cinema",
+    "super35",
+    "panavision",
+    "rental-only",
+    "matched-family"
+  ],
+  "importance": "legendary",
+  "timelineCategory": "Modern cinema primes",
+  "era": "1980s",
+  "cardLabel": "First completely matched modern Panavision prime/zoom family",
+  "publicSummary": "Panavision Primo optics set a new standard for modern spherical cinema lenses: high contrast, high resolution, even field illumination and a completely matched Panavision ecosystem.",
+  "coverage": "35mm motion-picture / Super 35 spherical format.",
+  "mounts": [
+    "Panavision mount"
+  ],
+  "focalLengths": [
+    "10, 14.5, 17.5, 21, 27, 35, 40, 50, 65, 75, 85, 100, 125, 150mm"
+  ],
+  "tStops": [
+    "Standard aperture around T1.8-T1.9 depending on focal length"
+  ],
+  "closeFocus": [
+    "See focalLengthSpecs."
+  ],
+  "focalLengthSpecs": [
+    {
+      "focalLength": "10mm",
+      "maxAperture": "T1.9",
+      "closeFocus": "0.61m / 24in",
+      "frontDiameter": "116.3mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "14.5mm",
+      "maxAperture": "T1.9",
+      "closeFocus": "0.61m / 24in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "17.5mm",
+      "maxAperture": "T1.9",
+      "closeFocus": "0.61m / 24in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "21mm",
+      "maxAperture": "T1.9",
+      "closeFocus": "0.61m / 24in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "27mm",
+      "maxAperture": "T1.9",
+      "closeFocus": "0.61m / 24in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "35mm",
+      "maxAperture": "T1.9",
+      "closeFocus": "0.61m / 24in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "40mm",
+      "maxAperture": "T1.9",
+      "closeFocus": "0.61m / 24in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "50mm",
+      "maxAperture": "T1.9",
+      "closeFocus": "0.61m / 24in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "65mm",
+      "maxAperture": "T1.8",
+      "closeFocus": "0.61m / 24in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "75mm",
+      "maxAperture": "T1.9",
+      "closeFocus": "0.91m / 36in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "85mm",
+      "maxAperture": "T1.8",
+      "closeFocus": "0.61m / 24in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "100mm",
+      "maxAperture": "T1.9",
+      "closeFocus": "0.91m / 36in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "125mm",
+      "maxAperture": "T1.8",
+      "closeFocus": "0.66m / 26in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    },
+    {
+      "focalLength": "150mm",
+      "maxAperture": "T1.9",
+      "closeFocus": "1.54m / 60.8in",
+      "frontDiameter": "113mm",
+      "coverage": "35mm motion-picture / Super 35",
+      "notes": ""
+    }
+  ],
+  "coating": "Panavision multi-layer coatings",
+  "designFamily": "Panavision Primo spherical primes and matched Primo optics ecosystem",
+  "lookSummary": "High-resolution, high-contrast, even-field modern Panavision rendering with low veiling glare, low ghosting and low distortion.",
+  "characteristics": [
+    "High contrast",
+    "High resolution",
+    "Even field illumination",
+    "Low veiling glare and ghosting",
+    "Low distortion",
+    "Panavision rental-only ecosystem"
+  ],
+  "strengths": [
+    "Landmark matched cinema lens family",
+    "Huge Hollywood track record",
+    "Technical polish and reliability",
+    "Seamless Panavision ecosystem"
+  ],
+  "weaknesses": [
+    "Rental-only Panavision system",
+    "Not open-market PL lenses",
+    "Original standard Primos are not full-frame",
+    "Can feel too polished for rough vintage work"
+  ],
+  "famousUses": [
+    {
+      "title": "Jurassic Park",
+      "year": 1993,
+      "role": "Panavision Primo Primes Spherical lenses",
+      "confidence": "high",
+      "notes": "Listed by ShotOnWhat/IMDb."
+    },
+    {
+      "title": "Casino",
+      "year": 1995,
+      "role": "Panavision Primo lenses",
+      "confidence": "high",
+      "notes": "Panavision history identifies Casino as shot with Panavision Primo lenses; IMDb lists Primo."
+    },
+    {
+      "title": "Titanic",
+      "year": 1997,
+      "role": "Panavision Primo lenses",
+      "confidence": "high",
+      "notes": "Listed by ShotOnWhat/IMDb."
+    },
+    {
+      "title": "The Matrix",
+      "year": 1999,
+      "role": "Panavision Primo Primes Spherical lenses",
+      "confidence": "high",
+      "notes": "Listed by ShotOnWhat."
+    },
+    {
+      "title": "The Matrix Reloaded",
+      "year": 2003,
+      "role": "Panavision Primo Primes Spherical lenses",
+      "confidence": "medium-high",
+      "notes": "Listed in Panavision Primo credit listings; verify individual sequel package if needed."
+    },
+    {
+      "title": "The Matrix Revolutions",
+      "year": 2003,
+      "role": "Panavision Primo Primes Spherical lenses",
+      "confidence": "medium-high",
+      "notes": "Listed in Panavision Primo credit listings; verify individual sequel package if needed."
+    },
+    {
+      "title": "Gladiator",
+      "year": 2000,
+      "role": "Panavision Primo Primes plus Primo zooms",
+      "confidence": "high",
+      "notes": "Listed by ShotOnWhat/IMDb."
+    },
+    {
+      "title": "Requiem for a Dream",
+      "year": 2000,
+      "role": "Panavision Primo Primes and Primo Zooms among mixed package",
+      "confidence": "high",
+      "notes": "Listed by ShotOnWhat."
+    }
+  ],
+  "sources": [
+    {
+      "label": "Panavision – Primo product page",
+      "url": "https://www.panavision.com/camera-and-optics/optics/product-detail/sl-primo"
+    },
+    {
+      "label": "Panavision – History & Awards",
+      "url": "https://www.panavision.com/about/history-awards"
+    },
+    {
+      "label": "ShotOnWhat – Jurassic Park technical specifications",
+      "url": "https://shotonwhat.com/jurassic-park-1993"
+    },
+    {
+      "label": "ShotOnWhat – Titanic technical specifications",
+      "url": "https://shotonwhat.com/titanic-2-1997"
+    },
+    {
+      "label": "ShotOnWhat – The Matrix technical specifications",
+      "url": "https://shotonwhat.com/the-matrix-1999"
+    },
+    {
+      "label": "ShotOnWhat – Gladiator technical specifications",
+      "url": "https://shotonwhat.com/gladiator-2000"
+    },
+    {
+      "label": "ShotOnWhat – Requiem for a Dream technical specifications",
+      "url": "https://shotonwhat.com/requiem-for-a-dream-2000"
+    }
+  ],
+  "confidence": "high",
+  "libraryStatus": "ready"
+}
