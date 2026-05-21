@@ -289,6 +289,7 @@ function normalizeLens(lens, fileName) {
     fileName: safeText(lens.fileName) || fileName,
     name: safeText(lens.name),
     manufacturer: safeText(lens.manufacturer),
+    designer: safeText(lens.designer),
     yearIntroduced: numberOrNull(lens.yearIntroduced),
     yearApproximate: Boolean(lens.yearApproximate),
     productionYears: safeText(lens.productionYears),
@@ -302,9 +303,13 @@ function normalizeLens(lens, fileName) {
     cardLabel,
     publicSummary: safeText(lens.publicSummary),
     coverage: safeText(lens.coverage),
+    formatCoverageNotes: asArray(lens.formatCoverageNotes),
     mounts: asArray(lens.mounts),
+    seriesHistory: asArray(lens.seriesHistory),
     focalLengths: asArray(lens.focalLengths),
     tStops: asArray(lens.tStops),
+    closeFocus: asArray(lens.closeFocus),
+    focalLengthSpecs: asArray(lens.focalLengthSpecs),
     opticalFormula: safeText(lens.opticalFormula),
     elements: numberOrNull(lens.elements),
     groups: numberOrNull(lens.groups),
@@ -322,6 +327,8 @@ function normalizeLens(lens, fileName) {
     relatedLensIds: asArray(lens.relatedLensIds),
     sources: asArray(lens.sources),
     confidence: normalizeConfidence(lens.confidence),
+    libraryStatus: safeText(lens.libraryStatus),
+    curationNotes: safeText(lens.curationNotes),
     notes: safeText(lens.notes),
     sourceFile: fileName,
     searchText: JSON.stringify(lens).toLowerCase()
@@ -622,6 +629,7 @@ function renderLensDetails(lens) {
     ["Source file", lens.sourceFile],
     ["Year introduced", formatYear(lens)],
     ["Production years", lens.productionYears],
+    ["Designer", lens.designer],
     ["Country", lens.country],
     ["Factory / location", lens.factoryLocation],
     ["Type", lens.type],
@@ -636,11 +644,16 @@ function renderLensDetails(lens) {
     ["Design family", lens.designFamily],
     ["Donor lens", lens.donorLens],
     ["Rehousing info", lens.rehousingInfo],
+    ["Library status", lens.libraryStatus],
     ["Confidence", lens.confidence]
   ];
 
   appendIf(fragment, createDetailSection("Record fields", createFieldGrid(factFields)));
   appendIf(fragment, createListSection("Look summary", lens.lookSummary ? [lens.lookSummary] : []));
+  appendIf(fragment, createListSection("Series history", lens.seriesHistory));
+  appendIf(fragment, createFocalLengthSpecsSection(lens.focalLengthSpecs));
+  appendIf(fragment, createListSection("Format coverage notes", lens.formatCoverageNotes));
+  appendIf(fragment, createListSection("Close focus", lens.closeFocus));
   appendIf(fragment, createListSection("Characteristics", lens.characteristics));
   appendIf(fragment, createListSection("Strengths", lens.strengths));
   appendIf(fragment, createListSection("Weaknesses", lens.weaknesses));
@@ -648,6 +661,7 @@ function renderLensDetails(lens) {
   appendIf(fragment, createYoutubeSection(lens.youtubeEmbeds));
   appendIf(fragment, createRelatedSection(lens));
   appendIf(fragment, createSourceSection(lens.sources));
+  appendIf(fragment, createListSection("Curation notes", lens.curationNotes ? [lens.curationNotes] : []));
   appendIf(fragment, createListSection("Notes", lens.notes ? [lens.notes] : []));
 
   return fragment;
@@ -692,10 +706,48 @@ function createListSection(title, items) {
   list.className = "list-block";
   items.forEach((item) => {
     const li = document.createElement("li");
-    li.textContent = item;
+    li.textContent = formatListItem(item);
     list.append(li);
   });
   return createDetailSection(title, list);
+}
+
+function createFocalLengthSpecsSection(specs) {
+  if (!hasValue(specs)) return null;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "spec-table-wrap";
+  wrapper.innerHTML = `
+    <table class="spec-table">
+      <thead>
+        <tr>
+          <th>Focal length</th>
+          <th>Series</th>
+          <th>Max aperture</th>
+          <th>Close focus</th>
+          <th>Coverage</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  `;
+
+  const body = wrapper.querySelector("tbody");
+  specs.forEach((spec) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+      <td>${escapeHtml(spec.focalLength)}</td>
+      <td>${escapeHtml(spec.series)}</td>
+      <td>${escapeHtml(spec.maxAperture)}</td>
+      <td>${escapeHtml(spec.closeFocus)}</td>
+      <td>${escapeHtml(spec.coverage)}</td>
+      <td>${escapeHtml(spec.notes)}</td>
+    `;
+    body.append(row);
+  });
+
+  return createDetailSection("Focal length specs", wrapper);
 }
 
 function createYoutubeSection(urls) {
@@ -809,6 +861,7 @@ function buildSearchText(lens) {
     lens.fileName,
     lens.name,
     lens.manufacturer,
+    lens.designer,
     lens.cardLabel,
     lens.timelineCategory,
     lens.country,
@@ -822,8 +875,13 @@ function buildSearchText(lens) {
     lens.publicSummary,
     lens.lookSummary,
     lens.notes,
+    lens.curationNotes,
     lens.sourceFile,
     lens.type,
+    lens.seriesHistory,
+    lens.formatCoverageNotes,
+    lens.closeFocus,
+    lens.focalLengthSpecs,
     lens.characteristics,
     lens.strengths,
     lens.weaknesses,
@@ -896,9 +954,38 @@ function formatYear(lens) {
 }
 
 function formatValue(value) {
-  if (Array.isArray(value)) return value.join(", ");
+  if (Array.isArray(value)) return value.map(formatListItem).join(", ");
+  if (value && typeof value === "object") return formatListItem(value);
   if (value === null || value === undefined || value === "") return "";
   return String(value);
+}
+
+function formatListItem(item) {
+  if (!item || typeof item !== "object") return safeText(item);
+
+  const preferredKeys = [
+    "title",
+    "series",
+    "focalLength",
+    "year",
+    "role",
+    "maxAperture",
+    "closeFocus",
+    "coverage",
+    "confidence",
+    "notes"
+  ];
+
+  return preferredKeys
+    .filter((key) => hasValue(item[key]))
+    .map((key) => `${labelFromKey(key)}: ${formatValue(item[key])}`)
+    .join(" · ");
+}
+
+function labelFromKey(key) {
+  return key
+    .replace(/([A-Z])/g, " $1")
+    .replace(/^./, (letter) => letter.toUpperCase());
 }
 
 function formatElementsGroups(lens) {

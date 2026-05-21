@@ -23,6 +23,9 @@
     "manufacturer": {
       "type": "string"
     },
+    "designer": {
+      "type": "string"
+    },
     "yearIntroduced": {
       "type": "integer"
     },
@@ -64,10 +67,37 @@
     "coverage": {
       "type": "string"
     },
+    "formatCoverageNotes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
     "mounts": {
       "type": "array",
       "items": {
         "type": "string"
+      }
+    },
+    "seriesHistory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "series": {
+            "type": "string"
+          },
+          "year": {
+            "type": "integer"
+          },
+          "yearApproximate": {
+            "type": "boolean"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
       }
     },
     "focalLengths": {
@@ -80,6 +110,39 @@
       "type": "array",
       "items": {
         "type": "string"
+      }
+    },
+    "closeFocus": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "focalLengthSpecs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "focalLength": {
+            "type": "string"
+          },
+          "series": {
+            "type": "string"
+          },
+          "maxAperture": {
+            "type": "string"
+          },
+          "closeFocus": {
+            "type": "string"
+          },
+          "coverage": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
       }
     },
     "opticalFormula": {
@@ -127,7 +190,15 @@
     "famousUses": {
       "type": "array",
       "items": {
-        "type": "string"
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "additionalProperties": true
+          }
+        ]
       }
     },
     "youtubeEmbeds": {
@@ -175,6 +246,12 @@
       "enum": ["verified", "medium", "needs verification", ""]
     },
     "notes": {
+      "type": "string"
+    },
+    "libraryStatus": {
+      "type": "string"
+    },
+    "curationNotes": {
       "type": "string"
     }
   }

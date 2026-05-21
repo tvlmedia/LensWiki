@@ -1,0 +1,297 @@
+{
+  "id": "1930-cooke-speed-panchro",
+  "slug": "1930-cooke-speed-panchro",
+  "fileName": "1930-cooke-speed-panchro.json",
+  "name": "Cooke Speed Panchro",
+  "manufacturer": "Taylor, Taylor & Hobson / Cooke",
+  "designer": "Horace W. Lee; later Series II associated with Gordon Cook",
+  "yearIntroduced": 1930,
+  "yearApproximate": false,
+  "productionYears": "1930 onward; Series I from 1930, Series II from 1945, Series III wide-angle redesigns circa 1953/1954",
+  "country": "United Kingdom",
+  "factoryLocation": "Leicester, England",
+  "type": [
+    "prime",
+    "spherical",
+    "vintage",
+    "cinema",
+    "s35",
+    "cooke",
+    "speed-panchro",
+    "foundational"
+  ],
+  "importance": "legendary",
+  "timelineCategory": "Classic cinema primes",
+  "era": "1930s",
+  "cardLabel": "Hollywood's defining vintage cinema prime family",
+  "publicSummary": "The Cooke Speed Panchro is one of the most important cinema lens families ever made. Introduced for cinematographic use around 1930, it brought fast f/2 performance, warm skin tones, gentle contrast, compact optics and the classic early Cooke Look to Hollywood from the sound era through the 1960s, and later returned as a go-to vintage choice for digital period work.",
+  "coverage": "Originally designed for 35mm motion-picture formats / Super 35-style coverage. Rehoused examples vary. Longer focal lengths can often cover larger sensors, while wider lenses generally remain S35-oriented.",
+  "formatCoverageNotes": [
+    "Original Speed Panchros are best treated as 35mm motion-picture / S35 lenses, not full-frame lenses.",
+    "Coverage varies strongly by focal length, series, copy, rehousing and focus distance.",
+    "Offshoot Rentals measured a TLS set at approximately: 18mm ≅31mm image circle, 25mm ≅34mm, 32mm ≅32mm, 40mm ≅38mm, 50mm ≅44mm, 75mm ≅45mm.",
+    "In that measured TLS set, the 50mm and 75mm could cover ARRI LF Open Gate with caveats, while the wider lenses did not fully cover LF Open Gate."
+  ],
+  "mounts": [
+    "Original cine mounts varied by era and camera system",
+    "Common vintage mounts include Bell & Howell, Mitchell, Eyemo, Arri Standard and other period mounts depending on lens/copy",
+    "Modern rehousings commonly use PL mount"
+  ],
+  "seriesHistory": [
+    {
+      "series": "Cooke Opic / Series O ancestry",
+      "year": 1920,
+      "notes": "Cooke traces Speed Panchro origins back to Horace Lee's Cooke Opic lenses, released in 1920, and the Cooke Series O f/2 design era."
+    },
+    {
+      "series": "Speed Panchro Series I",
+      "year": 1930,
+      "notes": "Created specifically for cinematographic applications. Cooke states Series I had 13 focal lengths from 24mm to 121mm at f/2."
+    },
+    {
+      "series": "Speed Panchro Series II",
+      "year": 1945,
+      "notes": "Coated redesigns with anti-reflective coating, commonly associated with 18mm, 25mm, 32mm, 40mm, 50mm and 75mm focal lengths."
+    },
+    {
+      "series": "Speed Panchro Series III",
+      "year": 1953,
+      "yearApproximate": true,
+      "notes": "Wide-angle redesigns, especially 18mm and 25mm, associated with larger angular fields for widescreen-era requirements."
+    }
+  ],
+  "focalLengths": [
+    "Series I: 24mm to 121mm range according to Cooke; commonly cited 1935 cinema set includes 24, 28, 32, 35, 40, 50, 75 and 108mm",
+    "Series II: commonly 18, 25, 32, 40, 50 and 75mm",
+    "Series III: redesigned wide angles, especially 18mm and 25mm",
+    "Common modern rehoused sets: 18, 25, 32, 40, 50, 75 and 100mm; some sets add 35mm, 152mm or related Deep Field/Telepanchro companions"
+  ],
+  "tStops": [
+    "Series I: f/2 across the 24mm to 121mm range according to Cooke's own historical article",
+    "Coated / later sets: commonly around T2.2-T2.3 for 18mm through 75mm, with 100mm commonly around T2.8",
+    "Modern rehoused measurements vary by rehousing company and individual lens"
+  ],
+  "closeFocus": [
+    "Original close focus varies by lens, original mount and rehousing; use copy-specific data when available.",
+    "Modern TLS-style rehoused examples often achieve very close focus: approx. 8 inches on 18mm/25mm, 9 inches on 32mm, 13 inches on 40mm, 15 inches on 50mm, 2 feet 4 inches on 75mm and 2 feet on 100mm."
+  ],
+  "focalLengthSpecs": [
+    {
+      "focalLength": "18mm",
+      "series": "Series III / later rehoused examples",
+      "maxAperture": "T2.2",
+      "closeFocus": "8 in / 0.20 m",
+      "frontDiameter": "110mm in common TLS rehousings",
+      "coverage": "S35-oriented; approx. 31mm image circle in one measured TLS set",
+      "notes": "Often listed as Series III in modern rehoused sets; original examples and rehousing specs vary."
+    },
+    {
+      "focalLength": "25mm",
+      "series": "Series II / Series III depending on copy",
+      "maxAperture": "T2.2",
+      "closeFocus": "8 in / 0.20 m",
+      "frontDiameter": "110mm in common TLS rehousings",
+      "coverage": "S35; approx. 34mm image circle in one measured TLS set",
+      "notes": "Common key focal length; Series III version was a wide-angle redesign."
+    },
+    {
+      "focalLength": "32mm",
+      "series": "Series II",
+      "maxAperture": "T2.3",
+      "closeFocus": "9 in / 0.23 m",
+      "frontDiameter": "110mm in common TLS rehousings",
+      "coverage": "S35; approx. 32mm image circle in one measured TLS set",
+      "notes": "Common modern rehoused set focal length."
+    },
+    {
+      "focalLength": "35mm",
+      "series": "Series I / II depending on copy",
+      "maxAperture": "T2.3 in common TLS rehousings",
+      "closeFocus": "11 in in one TLS spec table",
+      "frontDiameter": "110mm in common TLS rehousings",
+      "coverage": "S35-oriented",
+      "notes": "Important early Speed Panchro focal length; not always included in modern 6/7-lens sets."
+    },
+    {
+      "focalLength": "40mm",
+      "series": "Series II",
+      "maxAperture": "T2.3",
+      "closeFocus": "13 in / 0.33 m",
+      "frontDiameter": "110mm in common TLS rehousings",
+      "coverage": "S35; approx. 38mm image circle in one measured TLS set",
+      "notes": "Often a hero focal length for the Panchro look; Tom Sigel relied mostly on the 40mm for the first act of Bohemian Rhapsody."
+    },
+    {
+      "focalLength": "50mm",
+      "series": "Series II",
+      "maxAperture": "T2.3",
+      "closeFocus": "15 in / 0.38 m",
+      "frontDiameter": "110mm in common TLS rehousings",
+      "coverage": "S35; approx. 44mm image circle in one measured TLS set; may cover LF Open Gate with some vignetting depending on copy/focus",
+      "notes": "One of the most iconic Speed Panchro focal lengths."
+    },
+    {
+      "focalLength": "75mm",
+      "series": "Series II",
+      "maxAperture": "T2.3",
+      "closeFocus": "2 ft 4 in / approx. 0.71 m",
+      "frontDiameter": "110mm in common TLS rehousings",
+      "coverage": "S35; approx. 45mm image circle in one measured TLS set; can cover LF Open Gate in that measured set",
+      "notes": "Classic longer Panchro focal length."
+    },
+    {
+      "focalLength": "100mm",
+      "series": "Deep Field Panchro / companion focal length",
+      "maxAperture": "T2.8 in common TLS rehousings",
+      "closeFocus": "2 ft / approx. 0.61 m",
+      "frontDiameter": "110mm in common TLS rehousings",
+      "coverage": "Varies; often paired with Speed Panchro sets",
+      "notes": "Often listed as Cooke Deep Field Panchro 100mm rather than a standard Speed Panchro."
+    },
+    {
+      "focalLength": "152mm",
+      "series": "Telephoto companion / rehoused set addition",
+      "maxAperture": "T3.2 in some rehoused rental sets",
+      "closeFocus": "4 ft 9 in in some rehoused rental sets",
+      "frontDiameter": "110mm in some rehoused sets",
+      "coverage": "Likely larger than the wide lenses, but copy-specific",
+      "notes": "Not part of every Speed Panchro set; include as a related/companion focal length when present."
+    }
+  ],
+  "opticalFormula": "Family of fast spherical cinema prime designs descended from Cooke Opic / Series O f/2 thinking. Exact optical formulas vary by focal length and series. Treat the Speed Panchro as a lens family rather than one fixed formula.",
+  "elements": null,
+  "groups": null,
+  "coating": "Series I examples are often uncoated or early single-coated depending on copy/era; Series II introduced anti-reflective coating; coatings and condition vary heavily by individual lens.",
+  "designFamily": "Cooke Opic / Series O / Speed Panchro spherical cinema primes",
+  "donorLens": "",
+  "rehousingInfo": "Many surviving Speed Panchros have been rehoused by companies such as TLS, P+S Technik, Van Diemen and others. Rehousing typically adds PL mount, modern focus and iris gears, common fronts, improved close focus and more robust mechanics while retaining vintage optical blocks.",
+  "lookSummary": "Warm, gentle, face-friendly vintage spherical rendering with soft contrast, smooth focus roll-off, compact optical blocks, painterly separation, creamy bokeh and beautiful but sometimes aggressive flare. Wide open, they can feel soft/smeary in the best way; stopped down they become cleaner while retaining warmth.",
+  "characteristics": [
+    "Classic Cooke warmth",
+    "Gentle contrast",
+    "Soft highlight roll-off",
+    "Smooth focus falloff",
+    "Painterly / romantic vintage rendering",
+    "Creamy bokeh with possible swirl or cat's-eye shapes depending on focal length and stop",
+    "Can flare strongly, especially uncoated or worn examples",
+    "Small optical blocks and compact original mechanics",
+    "Strong copy-to-copy variation because of age, coating, rehousing and service history",
+    "S35-first coverage, with longer focal lengths sometimes covering larger sensors"
+  ],
+  "strengths": [
+    "One of the defining cinema lens families of the sound-era Hollywood look",
+    "Fast f/2-era performance made them extremely important when sound production limited noisy arc lighting",
+    "Very flattering on faces and skin",
+    "Strong historical connection to classic Hollywood",
+    "Highly useful today for period films, digital softening, nostalgic looks and painterly contrast",
+    "Modern rehousings make vintage optics practical on contemporary PL-mount cameras"
+  ],
+  "weaknesses": [
+    "Not full-frame as a family; coverage varies and wider lenses are S35-oriented",
+    "Copy-to-copy variation can be significant",
+    "Original mechanics are often not practical without rehousing",
+    "Can flare heavily and lose contrast",
+    "Wide-open performance can be soft or smeary compared with modern lenses",
+    "Exact specs differ across Series I, II, III, Deep Field Panchro and rehoused variants"
+  ],
+  "famousUses": [
+    {
+      "title": "Wings",
+      "year": 1927,
+      "role": "historical Cooke usage / early Academy Award-era citation",
+      "confidence": "medium",
+      "notes": "Cooke states Speed Panchros became Hollywood's lens of choice from the 1920s through the 1960s, citing Wings as the first Academy Award winner in that lineage."
+    },
+    {
+      "title": "Citizen Kane",
+      "year": 1941,
+      "role": "shot using Cooke Speed Panchro lenses",
+      "confidence": "high",
+      "notes": "ShotOnWhat lists Mitchell BNC camera and Cooke Speed Panchro lenses; IMDb also lists Cooke Speed Panchro and Astro-Berlin Pan Tachar lenses."
+    },
+    {
+      "title": "Casablanca",
+      "year": 1942,
+      "role": "classic Hollywood Cooke Speed Panchro citation",
+      "confidence": "high",
+      "notes": "Cooke's own history page cites Casablanca as part of the Speed Panchro era."
+    },
+    {
+      "title": "The Sound of Music",
+      "year": 1965,
+      "role": "classic Hollywood Cooke Speed Panchro citation",
+      "confidence": "high",
+      "notes": "Cooke's own history page cites The Sound of Music as part of the Speed Panchro era."
+    },
+    {
+      "title": "Bohemian Rhapsody",
+      "year": 2018,
+      "role": "vintage Speed Panchros used for the first act",
+      "confidence": "high",
+      "notes": "British Cinematographer reports Tom Sigel used a full vintage set of Cooke Speed Panchros for the entire first act, relying mostly on the 40mm with 25mm, 32mm and 50mm as secondary lenses."
+    },
+    {
+      "title": "Chernobyl",
+      "year": 2019,
+      "role": "rehoused vintage Cooke S2 Panchro lenses",
+      "confidence": "medium-high",
+      "notes": "Filmmakers Academy reports Jakob Ihre chose rehoused vintage Cooke S2 Panchro lenses, rehoused by TLS. IMDb also lists Cooke Speed Panchro lenses for Chernobyl."
+    }
+  ],
+  "youtubeEmbeds": [],
+  "imageUrls": [],
+  "relatedLensIds": [
+    "1920-cooke-opic",
+    "1924-cooke-series-o-f2",
+    "1893-cooke-triplet",
+    "2009-cooke-panchro-i",
+    "2016-cooke-panchro-i-classic",
+    "2023-cooke-sp3"
+  ],
+  "sources": [
+    {
+      "label": "Cooke Optics – Classic Cookes: Speed Panchro Series I; 1930-1947",
+      "url": "https://cookeoptics.com/news-and-events/classic-cookes-speed-panchro-series-1-1930-1947-war-finish/"
+    },
+    {
+      "label": "Cooke Optics – The History of Panchro, Part 1",
+      "url": "https://cookeoptics.com/news-and-events/the-history-of-panchro-part-1/"
+    },
+    {
+      "label": "Cooke Optics – The Cooke History",
+      "url": "https://cookeoptics.com/cooke-history/"
+    },
+    {
+      "label": "True Lens Services – Cooke Speed Panchro specs",
+      "url": "https://www.truelens.co.uk/cooke-speed-panchro"
+    },
+    {
+      "label": "Keslow Camera – Cooke Speed Panchro Primes TLS conversion specs",
+      "url": "https://www.keslowcamera.com/gear/cooke-speed-panchro-primes-tls-conversion/"
+    },
+    {
+      "label": "Offshoot Rentals – TLS Cooke Speed Panchro image circles and sensor coverage",
+      "url": "https://offshoot.rentals/articles/tls-cooke-speed-panchro-sensor-coverage"
+    },
+    {
+      "label": "ShotOnWhat – Citizen Kane technical specifications",
+      "url": "https://shotonwhat.com/citizen-kane-1941"
+    },
+    {
+      "label": "British Cinematographer – Bohemian Rhapsody vintage Cooke Speed Panchros",
+      "url": "https://britishcinematographer.co.uk/early-years-of-queen-lensed-with-vintage-cooke-speed-panchros/"
+    },
+    {
+      "label": "Filmmakers Academy – The Look of HBO's Chernobyl",
+      "url": "https://www.filmmakersacademy.com/look-of-chernobyl/"
+    },
+    {
+      "label": "IMDb – Chernobyl technical specifications",
+      "url": "https://www.imdb.com/title/tt7366338/technical/"
+    }
+  ],
+  "confidence": "high",
+  "libraryStatus": "ready",
+  "curationNotes": "This entry is designed as a complete LensWiki family/milestone entry. Use focalLengthSpecs for the tool UI table. Exact values should be marked copy-specific where the data comes from modern rehoused examples rather than original factory datasheets.",
+  "notes": "Speed Panchro history is messy because Series I, II, III, Deep Field Panchro companions and modern rehousings are often discussed together. The safest public presentation is to treat this as a family entry, then optionally create separate sub-entries later for Series I, Series II, Series III, Deep Field Panchro 100mm and modern Panchro/i Classic/SP3 descendants."
+}

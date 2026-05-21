@@ -1051,6 +1051,46 @@ button.dense-row:hover {
   background: rgba(255, 255, 255, 0.035);
 }
 
+.spec-table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.spec-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  color: #d9dee8;
+  font-size: 0.86rem;
+}
+
+.spec-table th,
+.spec-table td {
+  padding: 11px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+
+.spec-table th {
+  color: var(--subtle);
+  font-size: 0.72rem;
+  font-weight: 760;
+  letter-spacing: 0.02em;
+}
+
+.spec-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.spec-table td:first-child {
+  color: var(--ink);
+  font-weight: 760;
+  white-space: nowrap;
+}
+
 .source-list a,
 .related-list button {
   color: #dff3ff;
