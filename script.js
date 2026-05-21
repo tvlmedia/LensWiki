@@ -1,5 +1,5 @@
 const INDEX_URL = "data/lens-index.json";
-const LIBRARY_LOAD_ERROR = "Could not load the LensWiki library. Check /data/lens-index.json and the listed JSON files.";
+const LIBRARY_LOAD_ERROR = "Could not load LensWiki library. Check /data/lens-index.json.";
 
 const IMPORTANCE_ORDER = {
   legendary: 0,
@@ -35,7 +35,7 @@ const state = {
     tag: "all",
     lineage: "all"
   },
-  mode: "cards",
+  mode: "timeline",
   gameLens: null,
   loadError: "",
   libraryStatus: {
@@ -282,6 +282,7 @@ function normalizeLens(lens, sourceFile) {
     designFamily: safeText(lens.designFamily),
     donorLens: safeText(lens.donorLens),
     rehousingInfo: safeText(lens.rehousingInfo),
+    publicSummary: safeText(lens.publicSummary),
     lookSummary: safeText(lens.lookSummary, "No look description yet."),
     cardLabel,
     characteristics,
@@ -326,7 +327,7 @@ function renderStats() {
 
 function renderLibraryStatus() {
   const { listedFiles, loadedFiles, failedFiles, importedRecords } = state.libraryStatus;
-  els.libraryStatus.textContent = `Loaded ${loadedFiles} of ${listedFiles} JSON files · Imported ${importedRecords} lens records · ${failedFiles} failed files`;
+  els.libraryStatus.textContent = `${importedRecords} ${importedRecords === 1 ? "record" : "records"} loaded from curated JSON files · ${loadedFiles}/${listedFiles} JSON files · ${failedFiles} failed`;
   els.libraryStatus.classList.toggle("has-failures", failedFiles > 0 || Boolean(state.loadError));
 }
 
@@ -344,14 +345,14 @@ function renderTimeline() {
   }
 
   if (!lenses.length) {
-    els.timelineViewport.innerHTML = '<div class="empty-state">No matching lenses. Try clearing filters.</div>';
+    els.timelineViewport.innerHTML = '<div class="empty-state">No lenses found. Clear filters or check the JSON library.</div>';
     return;
   }
 
-  if (state.mode === "eras") {
-    renderEraOverview(lenses);
+  if (state.mode === "timeline") {
+    renderArchiveTimeline(lenses);
   } else if (state.mode === "dense") {
-    renderCompactTimeline(lenses);
+    renderDenseTimeline(lenses);
   } else {
     renderCardTimeline(lenses);
   }
@@ -398,7 +399,7 @@ function createEraChip(label, count, isActive) {
   const button = document.createElement("button");
   button.type = "button";
   button.className = `era-chip${isActive ? " is-active" : ""}`;
-  button.innerHTML = `<strong>${escapeHtml(label)}</strong><span>${count} ${count === 1 ? "record" : "records"}</span>`;
+  button.innerHTML = `<strong>${escapeHtml(label)}</strong><span>${count}</span>`;
   return button;
 }
 
@@ -428,76 +429,85 @@ function clearFilters() {
   renderTimeline();
 }
 
-function renderEraOverview(lenses) {
+function renderArchiveTimeline(lenses) {
   const groups = groupByDecade(lenses);
   const container = document.createElement("div");
-  container.className = "era-overview";
-
-  Object.entries(groups).forEach(([decade, group]) => {
-    const panel = document.createElement("article");
-    panel.className = "era-panel";
-    const milestones = group.slice().sort(sortByImportanceThenYear).slice(0, 4);
-    panel.innerHTML = `
-      <header>
-        <h3>${escapeHtml(decade)}</h3>
-        <strong>${group.length}</strong>
-      </header>
-    `;
-
-    const list = document.createElement("ul");
-    milestones.forEach((lens) => {
-      const item = document.createElement("li");
-      const button = document.createElement("button");
-      button.type = "button";
-      button.innerHTML = `<span>${escapeHtml(lens.name)}</span><small>${escapeHtml(formatYear(lens))}</small>`;
-      button.addEventListener("click", () => openLens(lens.id));
-      item.append(button);
-      list.append(item);
-    });
-    panel.append(list);
-    container.append(panel);
-  });
-
-  els.timelineViewport.replaceChildren(container);
-}
-
-function renderCardTimeline(lenses) {
-  const groups = groupByDecade(lenses);
-  const list = document.createElement("div");
-  list.className = "timeline-list";
+  container.className = "archive-timeline";
 
   Object.entries(groups).forEach(([decade, group]) => {
     const section = document.createElement("section");
-    section.className = "decade-group";
+    section.className = "archive-decade";
     section.innerHTML = `
-      <div class="decade-heading">
+      <div class="archive-decade-heading">
         <h3>${escapeHtml(decade)}</h3>
         <span>${group.length} ${group.length === 1 ? "entry" : "entries"}</span>
       </div>
     `;
 
-    const grid = document.createElement("div");
-    grid.className = "lens-grid";
-    group.forEach((lens) => grid.append(createLensCard(lens)));
-    section.append(grid);
-    list.append(section);
+    const rows = document.createElement("div");
+    rows.className = "archive-rows";
+    group.forEach((lens) => rows.append(createArchiveRow(lens)));
+    section.append(rows);
+    container.append(section);
   });
 
-  els.timelineViewport.replaceChildren(list);
+  els.timelineViewport.replaceChildren(container);
 }
 
-function renderCompactTimeline(lenses) {
+function createArchiveRow(lens) {
+  const row = document.createElement("button");
+  row.type = "button";
+  row.className = "archive-row";
+  row.dataset.importance = lens.importance;
+  row.innerHTML = `
+    <span class="archive-year">${escapeHtml(formatYear(lens))}</span>
+    <span class="archive-main">
+      <strong>${escapeHtml(lens.name)}</strong>
+      <span class="archive-summary">${escapeHtml(getPublicSummary(lens))}</span>
+      <span class="archive-maker">${escapeHtml(formatArchiveMakerLine(lens))}</span>
+      <span class="archive-tags">${renderTags(lens.characteristics, 3)}</span>
+    </span>
+    <span class="archive-side">
+      <span class="importance-pill ${escapeHtml(lens.importance)}">${escapeHtml(lens.importance)}</span>
+      <span class="confidence ${escapeHtml(confidenceClass(lens.confidence))}">${escapeHtml(lens.confidence)}</span>
+    </span>
+  `;
+  row.addEventListener("click", () => openLens(lens.id));
+  return row;
+}
+
+function renderCardTimeline(lenses) {
+  const grid = document.createElement("div");
+  grid.className = "lens-grid";
+  lenses.forEach((lens) => grid.append(createLensCard(lens)));
+  els.timelineViewport.replaceChildren(grid);
+}
+
+function renderDenseTimeline(lenses) {
   const list = document.createElement("div");
-  list.className = "compact-list";
+  list.className = "dense-table";
+  list.innerHTML = `
+    <div class="dense-row dense-head" aria-hidden="true">
+      <span>Year</span>
+      <span>Name</span>
+      <span>Manufacturer</span>
+      <span>Category</span>
+      <span>Importance</span>
+      <span>Confidence</span>
+    </div>
+  `;
 
   lenses.forEach((lens) => {
     const row = document.createElement("button");
     row.type = "button";
-    row.className = "compact-row";
+    row.className = "dense-row";
     row.innerHTML = `
       <span>${escapeHtml(formatYear(lens))}</span>
-      <span><strong>${escapeHtml(lens.name)}</strong>${escapeHtml(lens.manufacturer)}</span>
+      <span><strong>${escapeHtml(lens.name)}</strong></span>
+      <span>${escapeHtml(lens.manufacturer)}</span>
+      <span>${escapeHtml(lens.cardLabel)}</span>
       <span class="importance-pill ${escapeHtml(lens.importance)}">${escapeHtml(lens.importance)}</span>
+      <span class="confidence ${escapeHtml(confidenceClass(lens.confidence))}">${escapeHtml(lens.confidence)}</span>
     `;
     row.addEventListener("click", () => openLens(lens.id));
     list.append(row);
@@ -512,11 +522,6 @@ function createLensCard(lens) {
   card.className = "lens-card";
   card.dataset.importance = lens.importance;
 
-  const tagBadges = lens.characteristics
-    .slice(0, 3)
-    .map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`)
-    .join("");
-
   card.innerHTML = `
     <div class="card-topline">
       <span class="year-pill">${escapeHtml(formatYear(lens))}</span>
@@ -524,12 +529,35 @@ function createLensCard(lens) {
     </div>
     <h3>${escapeHtml(lens.name)}</h3>
     <p class="manufacturer">${escapeHtml(lens.manufacturer)}</p>
-    <span class="data-pill card-label">${escapeHtml(lens.cardLabel)}</span>
-    <p class="look-summary">${escapeHtml(lens.lookSummary)}</p>
-    <div class="chip-list">${tagBadges}</div>
+    <p class="card-label">${escapeHtml(lens.cardLabel)}</p>
+    <p class="look-summary">${escapeHtml(getPublicSummary(lens))}</p>
+    <div class="chip-list">${renderTags(lens.characteristics, 3)}</div>
   `;
   card.addEventListener("click", () => openLens(lens.id));
   return card;
+}
+
+function renderTags(tags, limit = 3) {
+  const visibleTags = tags.slice(0, limit);
+  const remaining = tags.length - visibleTags.length;
+  const chips = visibleTags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`);
+  if (remaining > 0) {
+    chips.push(`<span class="tag tag-more">+${remaining}</span>`);
+  }
+  return chips.join("");
+}
+
+function getPublicSummary(lens) {
+  return safeText(lens.publicSummary)
+    || safeText(lens.lookSummary)
+    || safeText(lens.cardLabel)
+    || safeText(lens.designFamily)
+    || lens.type[0]
+    || "Lens archive record";
+}
+
+function formatArchiveMakerLine(lens) {
+  return [lens.manufacturer, lens.cardLabel].filter(Boolean).join(" / ");
 }
 
 function openLens(id) {
