@@ -1,0 +1,47 @@
+{
+  "id": "kowa-cine-prominar-anamorphic",
+  "name": "Kowa Cine Prominar Anamorphic",
+  "manufacturer": "Kowa",
+  "yearIntroduced": 1960,
+  "yearApproximate": true,
+  "productionYears": "",
+  "country": "Japan",
+  "factoryLocation": "",
+  "type": [
+    "prime",
+    "anamorphic",
+    "vintage"
+  ],
+  "lineage": "original cinema lens",
+  "importance": "important",
+  "coverage": "",
+  "mounts": [],
+  "focalLengths": [],
+  "tStops": [],
+  "opticalFormula": "",
+  "elements": null,
+  "groups": null,
+  "coating": "",
+  "designFamily": "Kowa Prominar",
+  "donorLens": "",
+  "rehousingInfo": "",
+  "lookSummary": "Compact vintage anamorphic character with distinctive flare behavior in many sample sets.",
+  "characteristics": [
+    "anamorphic",
+    "vintage",
+    "Japanese",
+    "warm flares",
+    "compact"
+  ],
+  "strengths": [],
+  "weaknesses": [],
+  "famousUses": [],
+  "youtubeEmbeds": [],
+  "imageUrls": [],
+  "relatedLensIds": [
+    "panavision-c-series-anamorphic"
+  ],
+  "sources": [],
+  "confidence": "needs verification",
+  "notes": "Add verified focal lengths, squeeze ratio and mount variants later."
+}

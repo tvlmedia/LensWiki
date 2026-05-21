@@ -1,0 +1,47 @@
+{
+  "id": "panavision-c-series-anamorphic",
+  "name": "Panavision C Series Anamorphic",
+  "manufacturer": "Panavision",
+  "yearIntroduced": 1968,
+  "yearApproximate": true,
+  "productionYears": "",
+  "country": "United States",
+  "factoryLocation": "",
+  "type": [
+    "prime",
+    "anamorphic",
+    "vintage"
+  ],
+  "lineage": "original cinema lens",
+  "importance": "legendary",
+  "coverage": "",
+  "mounts": [],
+  "focalLengths": [],
+  "tStops": [],
+  "opticalFormula": "",
+  "elements": null,
+  "groups": null,
+  "coating": "",
+  "designFamily": "Panavision anamorphic",
+  "donorLens": "",
+  "rehousingInfo": "",
+  "lookSummary": "A major anamorphic cinema reference with compact vintage personality; individual focal lengths vary.",
+  "characteristics": [
+    "anamorphic",
+    "vintage",
+    "Panavision",
+    "warm flares",
+    "scope"
+  ],
+  "strengths": [],
+  "weaknesses": [],
+  "famousUses": [],
+  "youtubeEmbeds": [],
+  "imageUrls": [],
+  "relatedLensIds": [
+    "kowa-cine-prominar-anamorphic"
+  ],
+  "sources": [],
+  "confidence": "needs verification",
+  "notes": "Rental-only ecosystem details and serial-specific history should be sourced."
+}

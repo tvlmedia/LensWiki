@@ -36,8 +36,7 @@ body {
   line-height: 1.5;
 }
 
-body.drawer-open,
-body.dialog-open {
+body.drawer-open {
   overflow: hidden;
 }
 
@@ -199,6 +198,13 @@ h3 {
   font-size: clamp(1.05rem, 2vw, 1.35rem);
 }
 
+.library-copy {
+  max-width: 650px;
+  margin-bottom: 0;
+  color: var(--muted);
+  font-size: 0.96rem;
+}
+
 .hero-stats {
   position: absolute;
   left: 50%;
@@ -238,7 +244,6 @@ h3 {
 .primary-button,
 .secondary-button,
 .ghost-button,
-.file-button,
 .icon-button,
 .scale-button {
   border: 1px solid transparent;
@@ -263,8 +268,7 @@ h3 {
   font-weight: 850;
 }
 
-.secondary-button,
-.file-button {
+.secondary-button {
   background: rgba(255, 255, 255, 0.09);
   border-color: var(--line);
 }
@@ -284,7 +288,6 @@ h3 {
 .primary-button:hover,
 .secondary-button:hover,
 .ghost-button:hover,
-.file-button:hover,
 .icon-button:hover,
 .scale-button:hover {
   transform: translateY(-1px);
@@ -488,6 +491,16 @@ select {
   background: rgba(232, 92, 117, 0.12);
 }
 
+.library-status {
+  margin-top: 14px;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.library-status.has-failures {
+  color: #ffe0e6;
+}
+
 .era-strip {
   display: grid;
   grid-auto-flow: column;
@@ -564,8 +577,7 @@ select {
 .compact-row,
 .discovery-panel,
 .secondary-tools details,
-.research-tools details,
-.add-dialog {
+.research-tools details {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: var(--panel);
@@ -895,19 +907,6 @@ select {
   color: var(--muted);
 }
 
-.workbench-actions input[type="file"] {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.local-data-status {
-  margin-top: 16px;
-  color: var(--muted);
-}
-
 .detail-drawer {
   position: fixed;
   inset: 0;
@@ -1068,58 +1067,6 @@ select {
   background: #000;
 }
 
-.add-dialog {
-  width: min(760px, calc(100% - 32px));
-  max-height: min(820px, calc(100% - 32px));
-  padding: 0;
-  color: var(--ink);
-  box-shadow: var(--shadow);
-}
-
-.add-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.72);
-}
-
-.add-dialog form {
-  padding: 24px;
-}
-
-.dialog-header,
-.dialog-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.dialog-header {
-  margin-bottom: 20px;
-}
-
-.dialog-header h2 {
-  margin: 0;
-}
-
-.form-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.form-grid label {
-  display: grid;
-  gap: 8px;
-}
-
-.full-span {
-  grid-column: 1 / -1;
-}
-
-.dialog-actions {
-  margin-top: 22px;
-  justify-content: flex-end;
-}
-
 @media (max-width: 1040px) {
   .control-band {
     grid-template-columns: 1fr;
@@ -1163,7 +1110,6 @@ select {
   .timeline-head,
   .filter-grid,
   .detail-grid,
-  .form-grid,
   .game-options,
   .discovery-grid,
   .timeline-actions {

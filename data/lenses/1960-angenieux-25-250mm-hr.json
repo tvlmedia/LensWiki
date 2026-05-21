@@ -1,0 +1,46 @@
+{
+  "id": "angenieux-25-250-hr",
+  "name": "Angenieux 25-250mm HR",
+  "manufacturer": "Angenieux",
+  "yearIntroduced": 1960,
+  "yearApproximate": true,
+  "productionYears": "",
+  "country": "France",
+  "factoryLocation": "",
+  "type": [
+    "zoom",
+    "vintage",
+    "spherical"
+  ],
+  "lineage": "original cinema lens",
+  "importance": "important",
+  "coverage": "",
+  "mounts": [],
+  "focalLengths": [
+    "25-250mm"
+  ],
+  "tStops": [],
+  "opticalFormula": "",
+  "elements": null,
+  "groups": null,
+  "coating": "",
+  "designFamily": "Angenieux long cine zoom",
+  "donorLens": "",
+  "rehousingInfo": "",
+  "lookSummary": "A long-range vintage zoom reference point; exact version history and dates need confirmation.",
+  "characteristics": [
+    "vintage",
+    "zoom",
+    "French",
+    "spherical"
+  ],
+  "strengths": [],
+  "weaknesses": [],
+  "famousUses": [],
+  "youtubeEmbeds": [],
+  "imageUrls": [],
+  "relatedLensIds": [],
+  "sources": [],
+  "confidence": "needs verification",
+  "notes": "Use as a placeholder for Angenieux zoom research."
+}

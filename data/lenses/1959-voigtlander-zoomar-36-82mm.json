@@ -1,0 +1,47 @@
+{
+  "id": "voigtlander-zoomar-36-82mm",
+  "name": "Voigtländer Zoomar 36-82mm",
+  "manufacturer": "Voigtländer / Zoomar",
+  "yearIntroduced": 1959,
+  "yearApproximate": true,
+  "productionYears": "",
+  "country": "",
+  "factoryLocation": "",
+  "type": [
+    "zoom",
+    "vintage",
+    "still-lens-derived"
+  ],
+  "lineage": "still lens derived",
+  "importance": "important",
+  "coverage": "",
+  "mounts": [],
+  "focalLengths": [
+    "36-82mm"
+  ],
+  "tStops": [],
+  "opticalFormula": "",
+  "elements": null,
+  "groups": null,
+  "coating": "",
+  "designFamily": "Zoomar",
+  "donorLens": "",
+  "rehousingInfo": "",
+  "lookSummary": "Early still-photography zoom often referenced in zoom-lens history; included here as a still-lens-derived milestone candidate until sources are added.",
+  "characteristics": [
+    "vintage",
+    "zoom",
+    "still-lens-derived"
+  ],
+  "strengths": [],
+  "weaknesses": [],
+  "famousUses": [],
+  "youtubeEmbeds": [],
+  "imageUrls": [],
+  "relatedLensIds": [
+    "angenieux-25-250-hr"
+  ],
+  "sources": [],
+  "confidence": "needs verification",
+  "notes": "Verify launch year, manufacturer relationship, mount variants and production details before treating this as confirmed."
+}

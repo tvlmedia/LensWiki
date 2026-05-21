@@ -31,6 +31,9 @@
           A visual archive of cinema lenses, optical history, rehousings,
           design families and sample footage.
         </p>
+        <p class="library-copy">
+          LensWiki is powered by manually curated JSON records. Every lens entry is a standalone file in the GitHub library.
+        </p>
       </div>
 
       <div class="hero-stats" aria-label="Archive summary">
@@ -119,6 +122,7 @@
         </div>
 
         <div class="data-status" id="dataStatus" hidden></div>
+        <div class="library-status" id="libraryStatus">Loading JSON library...</div>
         <div class="era-strip" id="eraStrip" aria-label="Decade shortcuts"></div>
         <div class="timeline-viewport" id="timelineViewport" aria-live="polite"></div>
       </section>
@@ -156,22 +160,20 @@
           <summary>
             <span>
               <span class="eyebrow">Research Tools</span>
-              <strong>Add, export and import lens data</strong>
+              <strong>GitHub JSON library</strong>
             </span>
             <span class="summary-hint">Open tools</span>
           </summary>
 
           <div class="research-tools-body">
-            <p>Local additions are stored in this browser until exported.</p>
+            <p>LensWiki is a curated JSON-based library. New lenses are added manually through GitHub.</p>
+            <p>
+              Add one standalone JSON file under <code>data/lenses/</code>, then list that file in
+              <code>data/lens-index.json</code>. GitHub Pages loads only the files named in that index.
+            </p>
             <div class="workbench-actions">
-              <button class="primary-button" id="openAddLens" type="button">Add Lens</button>
               <button class="secondary-button" id="exportJson" type="button">Export JSON</button>
-              <label class="file-button" for="importJson">Import JSON</label>
-              <input id="importJson" type="file" accept="application/json,.json">
-              <button class="ghost-button" id="clearLocalData" type="button">Clear Local Adds</button>
             </div>
-
-            <div class="local-data-status" id="localDataStatus"></div>
           </div>
         </details>
       </section>
@@ -187,77 +189,6 @@
       </article>
     </aside>
 
-    <dialog class="add-dialog" id="addLensDialog">
-      <form id="addLensForm" method="dialog">
-        <div class="dialog-header">
-          <div>
-            <p class="eyebrow">New local record</p>
-            <h2>Add Lens</h2>
-          </div>
-          <button class="icon-button" type="button" data-close-add-dialog aria-label="Close add lens form">
-            <span aria-hidden="true">x</span>
-          </button>
-        </div>
-
-        <div class="form-grid">
-          <label>
-            Name
-            <input name="name" required placeholder="Cooke Speed Panchro Series I">
-          </label>
-          <label>
-            Manufacturer
-            <input name="manufacturer" placeholder="Cooke">
-          </label>
-          <label>
-            Year
-            <input name="yearIntroduced" inputmode="numeric" pattern="[0-9]*" placeholder="1920">
-          </label>
-          <label>
-            Importance
-            <select name="importance">
-              <option value="niche">niche</option>
-              <option value="legendary">legendary</option>
-              <option value="important">important</option>
-              <option value="obscure">obscure</option>
-              <option value="experimental">experimental</option>
-            </select>
-          </label>
-          <label>
-            Type
-            <input name="type" placeholder="prime, vintage, spherical">
-          </label>
-          <label>
-            Format / coverage
-            <input name="coverage" placeholder="35mm, Super 35, full frame, unknown">
-          </label>
-          <label class="full-span">
-            Description
-            <textarea name="lookSummary" rows="3" placeholder="Short look description or research note"></textarea>
-          </label>
-          <label class="full-span">
-            Tags
-            <input name="characteristics" placeholder="warm flares, low contrast, German, rehoused">
-          </label>
-          <label class="full-span">
-            YouTube links
-            <textarea name="youtubeEmbeds" rows="2" placeholder="One URL per line"></textarea>
-          </label>
-          <label class="full-span">
-            Source links
-            <textarea name="sources" rows="2" placeholder="One URL per line"></textarea>
-          </label>
-          <label class="full-span">
-            Notes
-            <textarea name="notes" rows="3" placeholder="Unknowns, caveats, confidence notes"></textarea>
-          </label>
-        </div>
-
-        <div class="dialog-actions">
-          <button class="ghost-button" type="button" data-close-add-dialog>Cancel</button>
-          <button class="primary-button" value="default" type="submit">Save Lens</button>
-        </div>
-      </form>
-    </dialog>
     <script src="script.js" defer></script>
   </body>
 </html>

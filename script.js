@@ -1,5 +1,5 @@
-const DATA_URL = "data/lenses.json";
-const STORAGE_KEY = "lenspedia.localLenses.v1";
+const INDEX_URL = "data/lens-index.json";
+const LIBRARY_LOAD_ERROR = "Could not load the LensWiki library. Check /data/lens-index.json and the listed JSON files.";
 
 const IMPORTANCE_ORDER = {
   legendary: 0,
@@ -24,8 +24,6 @@ const DEFAULT_IMPORTANCE = ["legendary", "important", "niche", "obscure", "exper
 const DEFAULT_LINEAGES = ["original cinema lens", "rehoused", "still lens derived", "unknown"];
 
 const state = {
-  baseLenses: [],
-  localLenses: [],
   lenses: [],
   filters: {
     search: "",
@@ -39,7 +37,13 @@ const state = {
   },
   mode: "cards",
   gameLens: null,
-  loadError: ""
+  loadError: "",
+  libraryStatus: {
+    listedFiles: 0,
+    loadedFiles: 0,
+    failedFiles: 0,
+    importedRecords: 0
+  }
 };
 
 const els = {};
@@ -47,7 +51,8 @@ const els = {};
 document.addEventListener("DOMContentLoaded", () => {
   init().catch((error) => {
     console.error(error);
-    showFatalError();
+    state.loadError = LIBRARY_LOAD_ERROR;
+    renderAll();
   });
 });
 
@@ -55,16 +60,13 @@ async function init() {
   cacheEls();
   bindEvents();
 
-  try {
-    state.baseLenses = await loadBaseLenses();
-  } catch (error) {
-    console.error(error);
-    state.loadError = "Could not load data/lenses.json. Check if the JSON is valid.";
-    state.baseLenses = [];
+  const library = await loadLensLibrary();
+  state.lenses = library.lenses;
+  state.libraryStatus = library.status;
+  if (!state.lenses.length) {
+    state.loadError = LIBRARY_LOAD_ERROR;
   }
 
-  state.localLenses = loadLocalLenses();
-  refreshData();
   renderAll();
 }
 
@@ -87,17 +89,12 @@ function cacheEls() {
     "timelineViewport",
     "resultSummary",
     "dataStatus",
+    "libraryStatus",
     "randomLensButtonSecondary",
     "gameCard",
-    "openAddLens",
     "exportJson",
-    "importJson",
-    "clearLocalData",
-    "localDataStatus",
     "detailDrawer",
-    "drawerContent",
-    "addLensDialog",
-    "addLensForm"
+    "drawerContent"
   ].forEach((id) => {
     els[id] = document.getElementById(id);
   });
@@ -134,11 +131,7 @@ function bindEvents() {
   });
 
   els.randomLensButtonSecondary.addEventListener("click", openRandomLens);
-  els.openAddLens.addEventListener("click", openAddDialog);
   els.exportJson.addEventListener("click", exportJson);
-  els.importJson.addEventListener("change", importJson);
-  els.clearLocalData.addEventListener("click", clearLocalData);
-  els.addLensForm.addEventListener("submit", saveNewLens);
 
   els.detailDrawer.addEventListener("click", (event) => {
     if (event.target.closest("[data-close-drawer]")) {
@@ -149,73 +142,133 @@ function bindEvents() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeDrawer();
-      if (els.addLensDialog.open) els.addLensDialog.close();
     }
   });
+}
 
-  els.addLensDialog.addEventListener("close", () => {
-    document.body.classList.remove("dialog-open");
-    els.addLensForm.reset();
-  });
+async function loadLensLibrary() {
+  const status = {
+    listedFiles: 0,
+    loadedFiles: 0,
+    failedFiles: 0,
+    importedRecords: 0
+  };
 
-  document.querySelectorAll("[data-close-add-dialog]").forEach((button) => {
-    button.addEventListener("click", () => {
-      els.addLensDialog.close();
+  let indexPayload;
+  let indexUrl;
+  try {
+    indexUrl = new URL(INDEX_URL, window.location.href);
+    const response = await fetch(indexUrl.href, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`${INDEX_URL} returned ${response.status}`);
+    }
+    indexPayload = await response.json();
+  } catch (error) {
+    console.warn("LensWiki: could not load data/lens-index.json", error);
+    return { lenses: [], status };
+  }
+
+  const files = Array.isArray(indexPayload.files) ? indexPayload.files : [];
+  if (!files.length) {
+    console.warn("LensWiki: data/lens-index.json does not contain a non-empty files array.");
+  }
+  status.listedFiles = files.length;
+
+  const results = await Promise.all(files.map((file) => loadLensFile(file, indexUrl)));
+  const seenIds = new Set();
+  const lenses = [];
+
+  results.forEach((result) => {
+    if (result.failed) {
+      status.failedFiles += 1;
+      return;
+    }
+
+    status.loadedFiles += 1;
+    result.lenses.forEach((lens) => {
+      if (!isValidLens(lens, result.file)) return;
+      const normalized = normalizeLens(lens, result.file);
+      if (seenIds.has(normalized.id)) {
+        console.warn(`LensWiki: duplicate lens id "${normalized.id}" in ${result.file}. Keeping the first record.`);
+        return;
+      }
+      seenIds.add(normalized.id);
+      lenses.push(normalized);
     });
   });
+
+  lenses.sort(sortByYearThenImportance);
+  status.importedRecords = lenses.length;
+  return { lenses, status };
 }
 
-async function loadBaseLenses() {
-  const response = await fetch(DATA_URL, { cache: "no-store" });
-  if (!response.ok) {
-    throw new Error(`Unable to load ${DATA_URL}: ${response.status}`);
-  }
+async function loadLensFile(file, indexUrl) {
+  const url = new URL(file, indexUrl);
 
-  const payload = await response.json();
-  const lenses = Array.isArray(payload) ? payload : payload.lenses;
-  if (!Array.isArray(lenses)) {
-    throw new Error(`${DATA_URL} must be an array or contain a lenses array.`);
-  }
-  return lenses;
-}
-
-function loadLocalLenses() {
   try {
-    const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    return Array.isArray(value) ? value : [];
-  } catch {
-    return [];
+    const response = await fetch(url.href, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`${file} returned ${response.status}`);
+    }
+    const payload = await response.json();
+    return { file, lenses: extractLensRecords(payload, file), failed: false };
+  } catch (error) {
+    console.warn(`LensWiki: could not load or parse ${file}`, error);
+    return { file, lenses: [], failed: true };
   }
 }
 
-function saveLocalLenses() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state.localLenses, null, 2));
+function extractLensRecords(payload, file) {
+  if (payload && Array.isArray(payload.lenses)) {
+    return payload.lenses;
+  }
+
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    return [payload];
+  }
+
+  console.warn(`LensWiki: ${file} is not a lens object or a wrapper with a lenses array.`);
+  return [];
 }
 
-function refreshData() {
-  const byId = new Map();
-  [...state.baseLenses, ...state.localLenses].forEach((lens) => {
-    const normalized = normalizeLens(lens);
-    byId.set(normalized.id, normalized);
-  });
-  state.lenses = Array.from(byId.values()).sort(sortByYearThenImportance);
+function isValidLens(lens, file) {
+  if (!lens || typeof lens !== "object" || Array.isArray(lens)) {
+    console.warn(`LensWiki: invalid lens record in ${file}.`);
+    return false;
+  }
+
+  const missing = [];
+  if (!safeText(lens.id)) missing.push("id");
+  if (!safeText(lens.name)) missing.push("name");
+  if (numberOrNull(lens.yearIntroduced) === null) missing.push("yearIntroduced");
+
+  if (missing.length) {
+    console.warn(`LensWiki: skipping record in ${file}; missing ${missing.join(", ")}.`);
+    return false;
+  }
+
+  return true;
 }
 
-function normalizeLens(lens) {
-  const name = safeText(lens.name, "Untitled lens");
-  const manufacturer = safeText(lens.manufacturer, "Unknown manufacturer");
-  const id = safeText(lens.id, slugify(`${manufacturer}-${name}`));
+function normalizeLens(lens, sourceFile) {
+  const type = asArray(lens.type);
+  const characteristics = asArray(lens.characteristics);
+  const cardLabel = safeText(lens.cardLabel)
+    || safeText(lens.designFamily)
+    || type[0]
+    || safeText(lens.lineage)
+    || "lens record";
 
   return {
-    id,
-    name,
-    manufacturer,
+    id: safeText(lens.id),
+    name: safeText(lens.name),
+    manufacturer: safeText(lens.manufacturer, "Unknown manufacturer"),
     yearIntroduced: numberOrNull(lens.yearIntroduced),
     yearApproximate: Boolean(lens.yearApproximate),
     productionYears: safeText(lens.productionYears),
     country: safeText(lens.country),
     factoryLocation: safeText(lens.factoryLocation),
-    type: asArray(lens.type),
+    type,
     lineage: safeText(lens.lineage),
     importance: safeText(lens.importance, "niche").toLowerCase(),
     coverage: safeText(lens.coverage),
@@ -230,7 +283,8 @@ function normalizeLens(lens) {
     donorLens: safeText(lens.donorLens),
     rehousingInfo: safeText(lens.rehousingInfo),
     lookSummary: safeText(lens.lookSummary, "No look description yet."),
-    characteristics: asArray(lens.characteristics),
+    cardLabel,
+    characteristics,
     strengths: asArray(lens.strengths),
     weaknesses: asArray(lens.weaknesses),
     famousUses: asArray(lens.famousUses),
@@ -239,16 +293,18 @@ function normalizeLens(lens) {
     relatedLensIds: asArray(lens.relatedLensIds),
     sources: asArray(lens.sources),
     confidence: normalizeConfidence(lens.confidence),
-    notes: safeText(lens.notes)
+    notes: safeText(lens.notes),
+    sourceFile,
+    searchText: JSON.stringify(lens).toLowerCase()
   };
 }
 
 function renderAll() {
   renderFilterOptions();
   renderStats();
+  renderLibraryStatus();
   renderTimeline();
   startGame();
-  renderLocalStatus();
 }
 
 function renderFilterOptions() {
@@ -266,6 +322,12 @@ function renderStats() {
   els.totalLensCount.textContent = state.lenses.length;
   els.eraCount.textContent = eras.length;
   els.legendaryCount.textContent = state.lenses.filter((lens) => lens.importance === "legendary").length;
+}
+
+function renderLibraryStatus() {
+  const { listedFiles, loadedFiles, failedFiles, importedRecords } = state.libraryStatus;
+  els.libraryStatus.textContent = `Loaded ${loadedFiles} of ${listedFiles} JSON files · Imported ${importedRecords} lens records · ${failedFiles} failed files`;
+  els.libraryStatus.classList.toggle("has-failures", failedFiles > 0 || Boolean(state.loadError));
 }
 
 function renderTimeline() {
@@ -299,6 +361,9 @@ function renderDataStatus() {
   if (state.loadError) {
     els.dataStatus.hidden = false;
     els.dataStatus.textContent = state.loadError;
+  } else if (state.libraryStatus.failedFiles > 0) {
+    els.dataStatus.hidden = false;
+    els.dataStatus.textContent = `${state.libraryStatus.failedFiles} JSON file could not be loaded. Valid records are still shown.`;
   } else {
     els.dataStatus.hidden = true;
     els.dataStatus.textContent = "";
@@ -447,10 +512,6 @@ function createLensCard(lens) {
   card.className = "lens-card";
   card.dataset.importance = lens.importance;
 
-  const typeBadges = lens.type
-    .slice(0, 3)
-    .map((type) => `<span class="data-pill">${escapeHtml(type)}</span>`)
-    .join("");
   const tagBadges = lens.characteristics
     .slice(0, 3)
     .map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`)
@@ -463,8 +524,8 @@ function createLensCard(lens) {
     </div>
     <h3>${escapeHtml(lens.name)}</h3>
     <p class="manufacturer">${escapeHtml(lens.manufacturer)}</p>
+    <span class="data-pill card-label">${escapeHtml(lens.cardLabel)}</span>
     <p class="look-summary">${escapeHtml(lens.lookSummary)}</p>
-    <div class="card-meta">${typeBadges}</div>
     <div class="chip-list">${tagBadges}</div>
   `;
   card.addEventListener("click", () => openLens(lens.id));
@@ -504,6 +565,7 @@ function renderLensDetails(lens) {
   fragment.append(header);
 
   const factFields = [
+    ["Source file", lens.sourceFile],
     ["Year introduced", formatYear(lens)],
     ["Production years", lens.productionYears],
     ["Country", lens.country],
@@ -522,21 +584,25 @@ function renderLensDetails(lens) {
     ["Rehousing info", lens.rehousingInfo],
     ["Confidence level", lens.confidence]
   ];
-  fragment.append(createDetailSection("Technical and historical fields", createFieldGrid(factFields)));
-
-  fragment.append(createListSection("Characteristics", lens.characteristics));
-  fragment.append(createListSection("Strengths", lens.strengths));
-  fragment.append(createListSection("Weaknesses", lens.weaknesses));
-  fragment.append(createListSection("Famous uses", lens.famousUses));
-  fragment.append(createYoutubeSection(lens.youtubeEmbeds));
-  fragment.append(createRelatedSection(lens));
-  fragment.append(createSourceSection(lens.sources));
-  fragment.append(createListSection("Notes", lens.notes ? [lens.notes] : []));
+  appendIf(fragment, createDetailSection("Technical and historical fields", createFieldGrid(factFields)));
+  appendIf(fragment, createListSection("Characteristics", lens.characteristics));
+  appendIf(fragment, createListSection("Strengths", lens.strengths));
+  appendIf(fragment, createListSection("Weaknesses", lens.weaknesses));
+  appendIf(fragment, createListSection("Famous uses", lens.famousUses));
+  appendIf(fragment, createYoutubeSection(lens.youtubeEmbeds));
+  appendIf(fragment, createRelatedSection(lens));
+  appendIf(fragment, createSourceSection(lens.sources));
+  appendIf(fragment, createListSection("Notes", lens.notes ? [lens.notes] : []));
 
   return fragment;
 }
 
+function appendIf(fragment, node) {
+  if (node) fragment.append(node);
+}
+
 function createDetailSection(title, content) {
+  if (!content) return null;
   const section = document.createElement("section");
   section.className = "detail-section";
   section.innerHTML = `<h3>${escapeHtml(title)}</h3>`;
@@ -545,16 +611,18 @@ function createDetailSection(title, content) {
 }
 
 function createFieldGrid(fields) {
+  const visibleFields = fields.filter(([, value]) => hasValue(value));
+  if (!visibleFields.length) return null;
+
   const grid = document.createElement("dl");
   grid.className = "detail-grid";
 
-  fields.forEach(([label, value]) => {
+  visibleFields.forEach(([label, value]) => {
     const field = document.createElement("div");
     field.className = "detail-field";
-    const displayValue = formatValue(value);
     field.innerHTML = `
       <dt>${escapeHtml(label)}</dt>
-      <dd>${escapeHtml(displayValue || "unknown")}</dd>
+      <dd>${escapeHtml(formatValue(value))}</dd>
     `;
     grid.append(field);
   });
@@ -563,89 +631,82 @@ function createFieldGrid(fields) {
 }
 
 function createListSection(title, items) {
+  if (!hasValue(items)) return null;
   const list = document.createElement("ul");
   list.className = "list-block";
-  if (!items.length) {
-    list.innerHTML = "<li>unknown</li>";
-  } else {
-    items.forEach((item) => {
-      const li = document.createElement("li");
-      li.textContent = item;
-      list.append(li);
-    });
-  }
+  items.forEach((item) => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    list.append(li);
+  });
   return createDetailSection(title, list);
 }
 
 function createYoutubeSection(urls) {
+  const embeds = urls.map(getYouTubeEmbedUrl).filter(Boolean);
+  if (!embeds.length) return null;
+
   const grid = document.createElement("div");
   grid.className = "youtube-grid";
-
-  const embeds = urls.map(getYouTubeEmbedUrl).filter(Boolean);
-  if (!embeds.length) {
-    grid.innerHTML = '<div class="detail-field">No sample footage links yet.</div>';
-  } else {
-    embeds.forEach((url) => {
-      const iframe = document.createElement("iframe");
-      iframe.loading = "lazy";
-      iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
-      iframe.allowFullscreen = true;
-      iframe.src = url;
-      grid.append(iframe);
-    });
-  }
+  embeds.forEach((url) => {
+    const iframe = document.createElement("iframe");
+    iframe.loading = "lazy";
+    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
+    iframe.allowFullscreen = true;
+    iframe.src = url;
+    grid.append(iframe);
+  });
 
   return createDetailSection("YouTube sample footage", grid);
 }
 
 function createRelatedSection(lens) {
-  const related = lens.relatedLensIds
-    .map((id) => state.lenses.find((item) => item.id === id))
-    .filter(Boolean);
-
+  if (!hasValue(lens.relatedLensIds)) return null;
   const wrapper = document.createElement("div");
   wrapper.className = "related-list";
 
-  if (!related.length) {
-    wrapper.innerHTML = '<span class="tag">No related lenses linked yet.</span>';
-  } else {
-    related.forEach((item) => {
+  lens.relatedLensIds.forEach((id) => {
+    const related = state.lenses.find((item) => item.id === id);
+    if (related) {
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = item.name;
-      button.addEventListener("click", () => openLens(item.id));
+      button.textContent = related.name;
+      button.addEventListener("click", () => openLens(related.id));
       wrapper.append(button);
-    });
-  }
+    } else {
+      const chip = document.createElement("span");
+      chip.className = "tag";
+      chip.textContent = id;
+      wrapper.append(chip);
+    }
+  });
 
-  return createDetailSection("This lens is related to", wrapper);
+  return createDetailSection("Related lenses", wrapper);
 }
 
 function createSourceSection(sources) {
+  if (!hasValue(sources)) return null;
   const wrapper = document.createElement("div");
   wrapper.className = "source-list";
 
-  if (!sources.length) {
-    wrapper.innerHTML = '<span class="tag">needs source</span>';
-  } else {
-    sources.forEach((source, index) => {
-      const href = typeof source === "string" ? source : source.url;
-      const label = typeof source === "string" ? `Source ${index + 1}` : source.label || `Source ${index + 1}`;
-      if (!href) return;
-      const link = document.createElement("a");
-      link.href = href;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = label;
-      wrapper.append(link);
-    });
-  }
+  sources.forEach((source, index) => {
+    const href = typeof source === "string" ? source : source.url;
+    const label = typeof source === "string" ? `Source ${index + 1}` : source.label || `Source ${index + 1}`;
+    if (!href) return;
+    const link = document.createElement("a");
+    link.href = href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = label;
+    wrapper.append(link);
+  });
 
-  return createDetailSection("Sources / references", wrapper);
+  return wrapper.children.length ? createDetailSection("Sources", wrapper) : null;
 }
 
 function openRandomLens() {
-  const lenses = getFilteredLenses().length ? getFilteredLenses() : state.lenses;
+  const filtered = getFilteredLenses();
+  const lenses = filtered.length ? filtered : state.lenses;
   if (!lenses.length) return;
   const lens = lenses[Math.floor(Math.random() * lenses.length)];
   openLens(lens.id);
@@ -698,118 +759,28 @@ function buildGameOptions(correctEra) {
   return [correctEra, ...shuffled.slice(0, 3)].sort(() => Math.random() - 0.5);
 }
 
-function openAddDialog() {
-  els.addLensDialog.showModal();
-  document.body.classList.add("dialog-open");
-  els.addLensDialog.querySelector("input[name='name']").focus();
-}
-
-function saveNewLens(event) {
-  event.preventDefault();
-  const formData = new FormData(els.addLensForm);
-  const name = safeText(formData.get("name"), "Untitled lens");
-  const manufacturer = safeText(formData.get("manufacturer"), "Unknown manufacturer");
-  const yearIntroduced = numberOrNull(formData.get("yearIntroduced"));
-  const type = splitList(formData.get("type"));
-  const characteristics = splitList(formData.get("characteristics"));
-  const newLens = normalizeLens({
-    id: slugify(`${manufacturer}-${name}-${yearIntroduced || "unknown"}`),
-    name,
-    manufacturer,
-    yearIntroduced,
-    yearApproximate: Boolean(yearIntroduced),
-    productionYears: "",
-    country: "",
-    factoryLocation: "",
-    type,
-    lineage: inferLineage(type, characteristics),
-    importance: safeText(formData.get("importance"), "niche"),
-    coverage: safeText(formData.get("coverage")),
-    mounts: [],
-    focalLengths: [],
-    tStops: [],
-    opticalFormula: "",
-    elements: null,
-    groups: null,
-    coating: "",
-    designFamily: "",
-    donorLens: "",
-    rehousingInfo: "",
-    lookSummary: safeText(formData.get("lookSummary"), "No look description yet."),
-    characteristics,
-    strengths: [],
-    weaknesses: [],
-    famousUses: [],
-    youtubeEmbeds: splitLines(formData.get("youtubeEmbeds")),
-    imageUrls: [],
-    relatedLensIds: [],
-    sources: splitLines(formData.get("sources")),
-    confidence: "needs verification",
-    notes: safeText(formData.get("notes"))
-  });
-
-  state.localLenses = upsertById(state.localLenses, newLens);
-  saveLocalLenses();
-  refreshData();
-  renderAll();
-  els.addLensDialog.close();
-  openLens(newLens.id);
-}
-
 function exportJson() {
   const payload = {
+    schemaVersion: "1.0",
+    project: "Cinema Lens Timeline / Lenspedia",
     exportedAt: new Date().toISOString(),
-    note: "Exported from Cinema Lens Timeline. Verify factual fields before publishing.",
-    lenses: state.lenses
+    source: "Generated from data/lens-index.json and standalone JSON files.",
+    lenses: state.lenses.map(toExportLens)
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "lenspedia-export.json";
+  link.download = "lenswiki-library-export.json";
   document.body.append(link);
   link.click();
   link.remove();
   URL.revokeObjectURL(url);
 }
 
-async function importJson(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  try {
-    const text = await file.text();
-    const payload = JSON.parse(text);
-    const incoming = Array.isArray(payload) ? payload : payload.lenses;
-    if (!Array.isArray(incoming)) {
-      renderLocalStatus("Import failed: expected an array or an object with a lenses array.");
-      return;
-    }
-    const normalized = incoming.map(normalizeLens);
-    state.localLenses = mergeById(state.localLenses, normalized);
-    saveLocalLenses();
-    refreshData();
-    renderAll();
-    renderLocalStatus(`Imported ${normalized.length} records into local storage.`);
-  } catch {
-    renderLocalStatus("Import failed: the file could not be read as JSON.");
-  } finally {
-    event.target.value = "";
-  }
-}
-
-function clearLocalData() {
-  const count = state.localLenses.length;
-  state.localLenses = [];
-  saveLocalLenses();
-  refreshData();
-  renderAll();
-  renderLocalStatus(`Cleared ${count} local records.`);
-}
-
-function renderLocalStatus(message = "") {
-  const count = state.localLenses.length;
-  els.localDataStatus.textContent = message || `${count} local ${count === 1 ? "record" : "records"} stored in this browser.`;
+function toExportLens(lens) {
+  const { searchText, ...exportable } = lens;
+  return exportable;
 }
 
 function getFilteredLenses() {
@@ -831,8 +802,10 @@ function getFilteredLenses() {
 
 function buildSearchText(lens) {
   return [
+    lens.searchText,
     lens.name,
     lens.manufacturer,
+    lens.cardLabel,
     lens.country,
     lens.factoryLocation,
     lens.coverage,
@@ -843,9 +816,11 @@ function buildSearchText(lens) {
     lens.rehousingInfo,
     lens.lookSummary,
     lens.notes,
+    lens.sourceFile,
     lens.type,
     lens.characteristics,
-    lens.famousUses
+    lens.famousUses,
+    lens.sources
   ].flat().filter(Boolean).join(" ").toLowerCase();
 }
 
@@ -918,30 +893,16 @@ function formatElementsGroups(lens) {
   return [elements, groups].filter(Boolean).join(" / ");
 }
 
-function splitList(value) {
-  return safeText(value)
-    .split(",")
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function splitLines(value) {
-  return safeText(value)
-    .split(/\r?\n/)
-    .map((item) => item.trim())
-    .filter(Boolean);
-}
-
-function inferLineage(types, tags) {
-  const all = [...types, ...tags].map((item) => item.toLowerCase());
-  if (all.some((item) => item.includes("rehoused"))) return "rehoused";
-  if (all.some((item) => item.includes("still"))) return "still lens derived";
-  return "unknown";
+function hasValue(value) {
+  if (Array.isArray(value)) return value.length > 0;
+  return value !== null && value !== undefined && value !== "";
 }
 
 function asArray(value) {
   if (Array.isArray(value)) return value.map((item) => safeText(item)).filter(Boolean);
-  if (typeof value === "string") return splitList(value);
+  if (typeof value === "string") {
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
+  }
   return [];
 }
 
@@ -971,16 +932,6 @@ function uniqueValues(values) {
   return Array.from(new Set(values.map((value) => safeText(value)).filter(Boolean)));
 }
 
-function upsertById(items, item) {
-  return mergeById(items.filter((current) => current.id !== item.id), [item]);
-}
-
-function mergeById(existing, incoming) {
-  const byId = new Map(existing.map((item) => [item.id, item]));
-  incoming.forEach((item) => byId.set(item.id, item));
-  return Array.from(byId.values()).sort(sortByYearThenImportance);
-}
-
 function getYouTubeEmbedUrl(value) {
   const text = safeText(value);
   if (!text) return "";
@@ -1003,14 +954,6 @@ function getYouTubeEmbedUrl(value) {
   }
 }
 
-function slugify(value) {
-  return safeText(value, "lens")
-    .toLowerCase()
-    .replace(/&/g, "and")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
-}
-
 function escapeHtml(value) {
   return safeText(value)
     .replace(/&/g, "&amp;")
@@ -1018,19 +961,4 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
-}
-
-function showFatalError() {
-  const message = "Could not load data/lenses.json. Check if the JSON is valid.";
-  const resultSummary = document.getElementById("resultSummary");
-  const timelineViewport = document.getElementById("timelineViewport");
-  const dataStatus = document.getElementById("dataStatus");
-  if (resultSummary) resultSummary.textContent = "0 records shown";
-  if (dataStatus) {
-    dataStatus.hidden = false;
-    dataStatus.textContent = message;
-  }
-  if (timelineViewport) {
-    timelineViewport.innerHTML = `<div class="empty-state error-state">${message}</div>`;
-  }
 }

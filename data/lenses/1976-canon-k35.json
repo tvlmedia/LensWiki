@@ -1,0 +1,48 @@
+{
+  "id": "canon-k35",
+  "name": "Canon K35",
+  "manufacturer": "Canon",
+  "yearIntroduced": 1976,
+  "yearApproximate": true,
+  "productionYears": "",
+  "country": "Japan",
+  "factoryLocation": "",
+  "type": [
+    "prime",
+    "vintage",
+    "spherical",
+    "still-lens-derived"
+  ],
+  "lineage": "still lens derived",
+  "importance": "legendary",
+  "coverage": "",
+  "mounts": [],
+  "focalLengths": [],
+  "tStops": [],
+  "opticalFormula": "",
+  "elements": null,
+  "groups": null,
+  "coating": "",
+  "designFamily": "Canon K35 / FD-adjacent research",
+  "donorLens": "needs source",
+  "rehousingInfo": "",
+  "lookSummary": "Large-image vintage Canon character with softer contrast and warm flare associations. Donor-lens lineage needs careful sourcing.",
+  "characteristics": [
+    "vintage",
+    "Japanese",
+    "warm",
+    "full frame",
+    "still-lens-derived"
+  ],
+  "strengths": [],
+  "weaknesses": [],
+  "famousUses": [],
+  "youtubeEmbeds": [],
+  "imageUrls": [],
+  "relatedLensIds": [
+    "sigma-cine-ff-high-speed-prime"
+  ],
+  "sources": [],
+  "confidence": "needs verification",
+  "notes": "Keep Canon FD and K35 relationships explicit and sourced before treating as fact."
+}
