@@ -87,7 +87,6 @@ function cacheEls() {
     "timelineViewport",
     "resultSummary",
     "dataStatus",
-    "randomLensButton",
     "randomLensButtonSecondary",
     "gameCard",
     "openAddLens",
@@ -134,7 +133,6 @@ function bindEvents() {
     renderTimeline();
   });
 
-  els.randomLensButton.addEventListener("click", openRandomLens);
   els.randomLensButtonSecondary.addEventListener("click", openRandomLens);
   els.openAddLens.addEventListener("click", openAddDialog);
   els.exportJson.addEventListener("click", exportJson);

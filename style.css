@@ -77,7 +77,7 @@ code {
 
 .site-hero {
   position: relative;
-  min-height: 560px;
+  min-height: 430px;
   isolation: isolate;
   overflow: hidden;
   background:
@@ -99,7 +99,7 @@ code {
 .topbar {
   width: min(var(--max), calc(100% - 32px));
   margin: 0 auto;
-  padding: 18px 0;
+  padding: 16px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -153,7 +153,7 @@ code {
 .hero-content {
   width: min(var(--max), calc(100% - 32px));
   margin: 0 auto;
-  padding: 104px 0 112px;
+  padding: 68px 0 94px;
 }
 
 .eyebrow {
@@ -173,10 +173,10 @@ p {
 }
 
 h1 {
-  max-width: 760px;
+  max-width: 720px;
   margin-bottom: 18px;
-  font-size: clamp(3rem, 7vw, 7rem);
-  line-height: 0.92;
+  font-size: clamp(2.6rem, 6vw, 5.7rem);
+  line-height: 0.95;
   letter-spacing: 0;
 }
 
@@ -194,7 +194,7 @@ h3 {
 }
 
 .hero-subtitle {
-  max-width: 720px;
+  max-width: 650px;
   color: #d7dce6;
   font-size: clamp(1.05rem, 2vw, 1.35rem);
 }
@@ -202,7 +202,7 @@ h3 {
 .hero-stats {
   position: absolute;
   left: 50%;
-  bottom: 24px;
+  bottom: 18px;
   transform: translateX(-50%);
   width: min(var(--max), calc(100% - 32px));
   display: grid;
@@ -306,31 +306,45 @@ main {
 }
 
 .timeline-section,
-.discovery-grid,
+.secondary-tools,
 .research-tools {
   width: min(var(--max), calc(100% - 32px));
   margin: 0 auto;
 }
 
 .timeline-section {
-  padding: 74px 0 50px;
+  padding: 50px 0 42px;
+}
+
+.timeline-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
 }
 
 .section-heading {
-  max-width: 820px;
-  margin-bottom: 24px;
+  max-width: 680px;
+  margin-bottom: 0;
 }
 
 .section-heading p:not(.eyebrow) {
   color: var(--muted);
 }
 
+.record-count {
+  margin: 0 0 6px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
 .control-band {
   display: grid;
-  grid-template-columns: minmax(260px, 0.9fr) minmax(420px, 1.7fr) minmax(220px, 0.75fr);
+  grid-template-columns: minmax(280px, 1fr) minmax(300px, auto);
   gap: 14px;
   align-items: end;
-  padding: 18px;
+  padding: 16px;
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: rgba(16, 18, 23, 0.94);
@@ -396,7 +410,9 @@ select {
 
 .timeline-actions {
   min-width: 0;
-  display: grid;
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
   gap: 10px;
 }
 
@@ -420,7 +436,47 @@ select {
 }
 
 .clear-filters {
-  width: 100%;
+  white-space: nowrap;
+}
+
+.advanced-filter-panel {
+  grid-column: 1 / -1;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.advanced-filter-panel summary {
+  list-style: none;
+  min-height: 46px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: var(--muted);
+}
+
+.advanced-filter-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.advanced-filter-panel summary span:first-child {
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.advanced-filter-panel summary span:last-child {
+  font-size: 0.86rem;
+}
+
+.advanced-filter-panel[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.advanced-filter-panel .filter-grid {
+  padding: 14px;
 }
 
 .data-status {
@@ -435,17 +491,17 @@ select {
 .era-strip {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: minmax(128px, 1fr);
-  gap: 10px;
+  grid-auto-columns: minmax(108px, auto);
+  gap: 8px;
   overflow-x: auto;
-  padding: 22px 0 14px;
+  padding: 16px 0 12px;
   scrollbar-color: var(--blue) transparent;
 }
 
 .era-chip {
   position: relative;
-  min-height: 72px;
-  padding: 13px;
+  min-height: 52px;
+  padding: 9px 12px;
   text-align: left;
   color: var(--ink);
   background: var(--panel);
@@ -457,9 +513,7 @@ select {
 .era-chip::before {
   content: "";
   position: absolute;
-  left: 13px;
-  right: 13px;
-  bottom: 10px;
+  display: none;
   height: 2px;
   background: linear-gradient(90deg, var(--blue), var(--brass));
   opacity: 0.55;
@@ -467,12 +521,12 @@ select {
 
 .era-chip strong {
   display: block;
-  font-size: 0.98rem;
+  font-size: 0.9rem;
 }
 
 .era-chip span {
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.72rem;
 }
 
 .era-chip.is-active {
@@ -509,6 +563,7 @@ select {
 .lens-card,
 .compact-row,
 .discovery-panel,
+.secondary-tools details,
 .research-tools details,
 .add-dialog {
   border: 1px solid var(--line);
@@ -561,18 +616,11 @@ select {
   position: relative;
   display: grid;
   gap: 20px;
-  padding-left: 24px;
+  padding-left: 0;
 }
 
 .timeline-list::before {
-  content: "";
-  position: absolute;
-  left: 7px;
-  top: 8px;
-  bottom: 8px;
-  width: 2px;
-  background: linear-gradient(180deg, var(--blue), var(--brass), var(--jade));
-  opacity: 0.48;
+  display: none;
 }
 
 .decade-group {
@@ -581,16 +629,13 @@ select {
 }
 
 .decade-heading {
-  position: sticky;
-  top: 0;
-  z-index: 2;
+  position: static;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 14px;
   padding: 8px 0;
-  background: rgba(8, 9, 11, 0.88);
-  backdrop-filter: blur(12px);
+  background: transparent;
 }
 
 .decade-heading h3 {
@@ -604,13 +649,13 @@ select {
 
 .lens-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 12px;
 }
 
 .lens-card {
   position: relative;
-  min-height: 252px;
+  min-height: 228px;
   padding: 18px;
   overflow: hidden;
   text-align: left;
@@ -717,7 +762,7 @@ select {
 .look-summary {
   color: #d1d6df;
   display: -webkit-box;
-  min-height: 64px;
+  min-height: 58px;
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
@@ -756,11 +801,47 @@ select {
   font-size: 0.86rem;
 }
 
+.secondary-tools {
+  padding: 0 0 18px;
+}
+
+.secondary-tools details,
+.research-tools details {
+  overflow: hidden;
+}
+
+.secondary-tools summary,
+.research-tools summary {
+  list-style: none;
+  min-height: 66px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.secondary-tools summary::-webkit-details-marker,
+.research-tools summary::-webkit-details-marker {
+  display: none;
+}
+
+.secondary-tools summary .eyebrow,
+.research-tools summary .eyebrow {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.secondary-tools details[open] .summary-hint,
+.research-tools details[open] .summary-hint {
+  color: var(--blue);
+}
+
 .discovery-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   gap: 16px;
-  padding: 22px 0 36px;
+  padding: 0 20px 20px;
 }
 
 .discovery-panel {
@@ -799,36 +880,9 @@ select {
   padding: 0 0 80px;
 }
 
-.research-tools details {
-  overflow: hidden;
-}
-
-.research-tools summary {
-  list-style: none;
-  min-height: 74px;
-  padding: 18px 22px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.research-tools summary::-webkit-details-marker {
-  display: none;
-}
-
-.research-tools summary .eyebrow {
-  display: block;
-  margin-bottom: 4px;
-}
-
 .summary-hint {
   color: var(--muted);
   font-size: 0.86rem;
-}
-
-.research-tools details[open] .summary-hint {
-  color: var(--blue);
 }
 
 .research-tools-body {
@@ -1083,7 +1137,7 @@ select {
 
 @media (max-width: 780px) {
   .site-hero {
-    min-height: 650px;
+    min-height: 560px;
   }
 
   .topbar {
@@ -1095,7 +1149,7 @@ select {
   }
 
   .hero-content {
-    padding-top: 82px;
+    padding-top: 62px;
   }
 
   .hero-stats {
@@ -1106,6 +1160,7 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .timeline-head,
   .filter-grid,
   .detail-grid,
   .form-grid,
@@ -1113,6 +1168,15 @@ select {
   .discovery-grid,
   .timeline-actions {
     grid-template-columns: 1fr;
+  }
+
+  .timeline-head,
+  .timeline-actions {
+    display: grid;
+  }
+
+  .record-count {
+    white-space: normal;
   }
 
   .timeline-list {
@@ -1150,6 +1214,7 @@ select {
     grid-template-columns: 1fr;
   }
 
+  .secondary-tools summary,
   .research-tools summary {
     align-items: flex-start;
     flex-direction: column;

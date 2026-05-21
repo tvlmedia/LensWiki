@@ -21,7 +21,6 @@
           <a href="#timeline">Timeline</a>
           <a href="#random">Random Lens</a>
           <a href="#research-tools">Research Tools</a>
-          <button class="ghost-button small" id="randomLensButton" type="button">Random Lens</button>
         </div>
       </nav>
 
@@ -52,10 +51,12 @@
 
     <main>
       <section class="timeline-section" id="timeline">
-        <div class="section-heading">
-          <p class="eyebrow">Timeline view</p>
-          <h2>From early cine glass to modern large-format systems</h2>
-          <p id="resultSummary">Loading lens records...</p>
+        <div class="timeline-head">
+          <div class="section-heading">
+            <p class="eyebrow">Timeline</p>
+            <h2>Lens archive</h2>
+          </div>
+          <p class="record-count" id="resultSummary">Loading lens records...</p>
         </div>
 
         <div class="control-band" aria-label="Archive controls">
@@ -69,37 +70,6 @@
             >
           </div>
 
-          <div class="filter-grid">
-            <label>
-              Era
-              <select id="eraFilter"></select>
-            </label>
-            <label>
-              Manufacturer
-              <select id="manufacturerFilter"></select>
-            </label>
-            <label>
-              Type
-              <select id="typeFilter"></select>
-            </label>
-            <label>
-              Format
-              <select id="formatFilter"></select>
-            </label>
-            <label>
-              Importance
-              <select id="importanceFilter"></select>
-            </label>
-            <label>
-              Look tag
-              <select id="tagFilter"></select>
-            </label>
-            <label>
-              Lineage
-              <select id="lineageFilter"></select>
-            </label>
-          </div>
-
           <div class="timeline-actions">
             <div class="timeline-scale" id="scaleToggle" aria-label="Timeline scale">
               <button class="scale-button" type="button" data-scale="eras" aria-pressed="false">Eras</button>
@@ -108,6 +78,44 @@
             </div>
             <button class="ghost-button clear-filters" id="clearFilters" type="button">Clear filters</button>
           </div>
+
+          <details class="advanced-filter-panel">
+            <summary>
+              <span>Filters</span>
+              <span>Era, maker, type, format, tags</span>
+            </summary>
+
+            <div class="filter-grid">
+              <label>
+                Era
+                <select id="eraFilter"></select>
+              </label>
+              <label>
+                Manufacturer
+                <select id="manufacturerFilter"></select>
+              </label>
+              <label>
+                Type
+                <select id="typeFilter"></select>
+              </label>
+              <label>
+                Format
+                <select id="formatFilter"></select>
+              </label>
+              <label>
+                Importance
+                <select id="importanceFilter"></select>
+              </label>
+              <label>
+                Look tag
+                <select id="tagFilter"></select>
+              </label>
+              <label>
+                Lineage
+                <select id="lineageFilter"></select>
+              </label>
+            </div>
+          </details>
         </div>
 
         <div class="data-status" id="dataStatus" hidden></div>
@@ -115,26 +123,32 @@
         <div class="timeline-viewport" id="timelineViewport" aria-live="polite"></div>
       </section>
 
-      <section class="discovery-grid" id="random" aria-label="Discovery tools">
-        <article class="discovery-panel">
-          <div>
-            <p class="eyebrow">Bonus tools</p>
-            <h2>Random discovery</h2>
-          </div>
-          <p id="randomLensCopy">
-            Open a random record and follow related lenses through design families,
-            rehousings and shared look tags.
-          </p>
-          <button class="primary-button" id="randomLensButtonSecondary" type="button">Random Lens</button>
-        </article>
+      <section class="secondary-tools" id="random">
+        <details>
+          <summary>
+            <span>
+              <span class="eyebrow">Discovery Extras</span>
+              <strong>Random lens and era challenge</strong>
+            </span>
+            <span class="summary-hint">Open extras</span>
+          </summary>
 
-        <article class="discovery-panel game-panel">
-          <div>
-            <p class="eyebrow">Mini-game</p>
-            <h2>Guess the lens era</h2>
+          <div class="discovery-grid" aria-label="Discovery tools">
+            <article class="discovery-panel">
+              <h2>Random discovery</h2>
+              <p id="randomLensCopy">
+                Open a random record and follow related lenses through design families,
+                rehousings and shared look tags.
+              </p>
+              <button class="primary-button" id="randomLensButtonSecondary" type="button">Random Lens</button>
+            </article>
+
+            <article class="discovery-panel game-panel">
+              <h2>Guess the lens era</h2>
+              <div id="gameCard" class="game-card"></div>
+            </article>
           </div>
-          <div id="gameCard" class="game-card"></div>
-        </article>
+        </details>
       </section>
 
       <section class="research-tools" id="research-tools">
