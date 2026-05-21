@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://tvlmedia.github.io/LensWiki/data/schemas/lens.schema.json",
+  "title": "LensWiki Lens Record",
+  "description": "Schema for a single curated LensWiki cinema lens JSON record.",
+  "type": "object",
+  "required": ["id", "name", "yearIntroduced"],
+  "additionalProperties": true,
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Stable lowercase identifier for the lens record."
+    },
+    "slug": {
+      "type": "string"
+    },
+    "fileName": {
+      "type": "string"
+    },
+    "name": {
+      "type": "string"
+    },
+    "manufacturer": {
+      "type": "string"
+    },
+    "yearIntroduced": {
+      "type": "integer"
+    },
+    "yearApproximate": {
+      "type": "boolean",
+      "default": false
+    },
+    "productionYears": {
+      "type": "string"
+    },
+    "country": {
+      "type": "string"
+    },
+    "factoryLocation": {
+      "type": "string"
+    },
+    "type": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "importance": {
+      "type": "string",
+      "enum": ["legendary", "important", "niche", "obscure", "experimental", ""]
+    },
+    "timelineCategory": {
+      "type": "string"
+    },
+    "era": {
+      "type": "string"
+    },
+    "cardLabel": {
+      "type": "string"
+    },
+    "publicSummary": {
+      "type": "string"
+    },
+    "coverage": {
+      "type": "string"
+    },
+    "mounts": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "focalLengths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "tStops": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "opticalFormula": {
+      "type": "string"
+    },
+    "elements": {
+      "type": ["integer", "null"]
+    },
+    "groups": {
+      "type": ["integer", "null"]
+    },
+    "coating": {
+      "type": "string"
+    },
+    "designFamily": {
+      "type": "string"
+    },
+    "donorLens": {
+      "type": "string"
+    },
+    "rehousingInfo": {
+      "type": "string"
+    },
+    "lookSummary": {
+      "type": "string"
+    },
+    "characteristics": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "strengths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "weaknesses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "famousUses": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "youtubeEmbeds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "imageUrls": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "relatedLensIds": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "sources": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "object",
+            "additionalProperties": true,
+            "properties": {
+              "label": {
+                "type": "string"
+              },
+              "url": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      }
+    },
+    "confidence": {
+      "type": "string",
+      "enum": ["verified", "medium", "needs verification", ""]
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

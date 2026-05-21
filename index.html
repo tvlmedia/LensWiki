@@ -18,9 +18,9 @@
           <span>Lenspedia</span>
         </a>
         <div class="nav-actions">
-          <a href="#timeline">Timeline</a>
-          <a href="#random">Random Lens</a>
-          <a href="#research-tools">Research Tools</a>
+          <a href="#timeline">Archive</a>
+          <a href="#developer-tools">Developer Tools</a>
+          <a href="docs/adding-lenses.md">Adding Lenses</a>
         </div>
       </nav>
 
@@ -127,40 +127,12 @@
         <div class="timeline-viewport" id="timelineViewport" aria-live="polite"></div>
       </section>
 
-      <section class="secondary-tools" id="random">
+      <section class="research-tools" id="developer-tools">
         <details>
           <summary>
             <span>
-              <span class="eyebrow">Discovery Extras</span>
-              <strong>Random lens and era challenge</strong>
-            </span>
-            <span class="summary-hint">Open extras</span>
-          </summary>
-
-          <div class="discovery-grid" aria-label="Discovery tools">
-            <article class="discovery-panel">
-              <h2>Random discovery</h2>
-              <p id="randomLensCopy">
-                Open a random record and follow related lenses through design families,
-                rehousings and shared look tags.
-              </p>
-              <button class="primary-button" id="randomLensButtonSecondary" type="button">Random Lens</button>
-            </article>
-
-            <article class="discovery-panel game-panel">
-              <h2>Guess the lens era</h2>
-              <div id="gameCard" class="game-card"></div>
-            </article>
-          </div>
-        </details>
-      </section>
-
-      <section class="research-tools" id="research-tools">
-        <details>
-          <summary>
-            <span>
-              <span class="eyebrow">Research Tools</span>
-              <strong>GitHub JSON library</strong>
+              <span class="eyebrow">Developer Tools</span>
+              <strong>Curated JSON library</strong>
             </span>
             <span class="summary-hint">Open tools</span>
           </summary>
@@ -168,10 +140,13 @@
           <div class="research-tools-body">
             <p>LensWiki is a curated JSON-based library. New lenses are added manually through GitHub.</p>
             <p>
-              Add one standalone JSON file under <code>data/lenses/</code>, then list that file in
-              <code>data/lens-index.json</code>. GitHub Pages loads only the files named in that index.
+              Add one standalone JSON file under <code>data/lenses/</code>. The site discovers JSON files
+              through the GitHub Contents API and ignores templates, schemas and non-JSON files.
             </p>
             <div class="workbench-actions">
+              <a class="secondary-button" href="data/templates/lens-template.json">Lens template</a>
+              <a class="secondary-button" href="data/schemas/lens.schema.json">Lens schema</a>
+              <a class="secondary-button" href="docs/adding-lenses.md">Adding guide</a>
               <button class="secondary-button" id="exportJson" type="button">Export JSON</button>
             </div>
           </div>
