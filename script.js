@@ -575,7 +575,7 @@ function createLensCard(lens) {
     </div>
     <h3>${escapeHtml(lens.name)}</h3>
     ${lens.manufacturer ? `<p class="manufacturer">${escapeHtml(lens.manufacturer)}</p>` : ""}
-    ${getCategory(lens) ? `<p class="card-label">${escapeHtml(getCategory(lens))}</p>` : ""}
+    ${getCardLabel(lens) ? `<p class="card-label">${escapeHtml(getCardLabel(lens))}</p>` : ""}
     ${getPublicSummary(lens) ? `<p class="look-summary">${escapeHtml(getPublicSummary(lens))}</p>` : ""}
     ${lens.characteristics.length ? `<div class="chip-list">${renderTags(lens.characteristics, 3)}</div>` : ""}
   `;
@@ -942,6 +942,10 @@ function getPublicSummary(lens) {
 
 function getCategory(lens) {
   return lens.timelineCategory || lens.cardLabel || lens.designFamily || lens.type[0] || "";
+}
+
+function getCardLabel(lens) {
+  return lens.cardLabel || lens.timelineCategory || lens.designFamily || lens.type[0] || "";
 }
 
 function formatArchiveMakerLine(lens) {
