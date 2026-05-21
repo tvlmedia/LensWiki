@@ -1,4 +1,6 @@
+const DATA_URL = "data/lenses.json";
 const STORAGE_KEY = "lenspedia.localLenses.v1";
+
 const IMPORTANCE_ORDER = {
   legendary: 0,
   important: 1,
@@ -21,359 +23,6 @@ const DEFAULT_TYPES = [
 const DEFAULT_IMPORTANCE = ["legendary", "important", "niche", "obscure", "experimental"];
 const DEFAULT_LINEAGES = ["original cinema lens", "rehoused", "still lens derived", "unknown"];
 
-const starterLenses = [
-  {
-    id: "cooke-speed-panchro-series-i",
-    name: "Cooke Speed Panchro Series I",
-    manufacturer: "Cooke",
-    yearIntroduced: 1920,
-    yearApproximate: true,
-    productionYears: "",
-    country: "United Kingdom",
-    factoryLocation: "",
-    type: ["prime", "vintage", "spherical"],
-    lineage: "original cinema lens",
-    importance: "legendary",
-    coverage: "",
-    mounts: [],
-    focalLengths: [],
-    tStops: [],
-    opticalFormula: "",
-    elements: null,
-    groups: null,
-    coating: "",
-    designFamily: "Speed Panchro",
-    donorLens: "",
-    rehousingInfo: "",
-    lookSummary: "Classic vintage spherical rendering often associated with gentle contrast and human skin tone reproduction. Specific technical claims need sourcing.",
-    characteristics: ["vintage", "low contrast", "Cooke", "British", "spherical"],
-    strengths: [],
-    weaknesses: [],
-    famousUses: [],
-    youtubeEmbeds: [],
-    imageUrls: [],
-    relatedLensIds: ["cooke-s4-i"],
-    sources: [],
-    confidence: "needs verification",
-    notes: "Starter record only. Treat dates and variants as approximate until sourced."
-  },
-  {
-    id: "bausch-lomb-baltar",
-    name: "Bausch & Lomb Baltar",
-    manufacturer: "Bausch & Lomb",
-    yearIntroduced: 1930,
-    yearApproximate: true,
-    productionYears: "",
-    country: "United States",
-    factoryLocation: "",
-    type: ["prime", "vintage", "spherical"],
-    lineage: "original cinema lens",
-    importance: "important",
-    coverage: "",
-    mounts: [],
-    focalLengths: [],
-    tStops: [],
-    opticalFormula: "",
-    elements: null,
-    groups: null,
-    coating: "",
-    designFamily: "Baltar",
-    donorLens: "",
-    rehousingInfo: "",
-    lookSummary: "Early American cinema prime family with a softer period character in many surviving examples.",
-    characteristics: ["vintage", "American", "soft", "spherical"],
-    strengths: [],
-    weaknesses: [],
-    famousUses: [],
-    youtubeEmbeds: [],
-    imageUrls: [],
-    relatedLensIds: [],
-    sources: [],
-    confidence: "needs verification",
-    notes: "The Baltar family spans multiple versions; split into subfamilies when verified."
-  },
-  {
-    id: "angenieux-25-250-hr",
-    name: "Angenieux 25-250mm HR",
-    manufacturer: "Angenieux",
-    yearIntroduced: 1960,
-    yearApproximate: true,
-    productionYears: "",
-    country: "France",
-    factoryLocation: "",
-    type: ["zoom", "vintage", "spherical"],
-    lineage: "original cinema lens",
-    importance: "important",
-    coverage: "",
-    mounts: [],
-    focalLengths: ["25-250mm"],
-    tStops: [],
-    opticalFormula: "",
-    elements: null,
-    groups: null,
-    coating: "",
-    designFamily: "Angenieux long cine zoom",
-    donorLens: "",
-    rehousingInfo: "",
-    lookSummary: "A long-range vintage zoom reference point; exact version history and dates need confirmation.",
-    characteristics: ["vintage", "zoom", "French", "spherical"],
-    strengths: [],
-    weaknesses: [],
-    famousUses: [],
-    youtubeEmbeds: [],
-    imageUrls: [],
-    relatedLensIds: [],
-    sources: [],
-    confidence: "needs verification",
-    notes: "Use as a placeholder for Angenieux zoom research."
-  },
-  {
-    id: "kowa-cine-prominar-anamorphic",
-    name: "Kowa Cine Prominar Anamorphic",
-    manufacturer: "Kowa",
-    yearIntroduced: 1960,
-    yearApproximate: true,
-    productionYears: "",
-    country: "Japan",
-    factoryLocation: "",
-    type: ["prime", "anamorphic", "vintage"],
-    lineage: "original cinema lens",
-    importance: "important",
-    coverage: "",
-    mounts: [],
-    focalLengths: [],
-    tStops: [],
-    opticalFormula: "",
-    elements: null,
-    groups: null,
-    coating: "",
-    designFamily: "Kowa Prominar",
-    donorLens: "",
-    rehousingInfo: "",
-    lookSummary: "Compact vintage anamorphic character with distinctive flare behavior in many sample sets.",
-    characteristics: ["anamorphic", "vintage", "Japanese", "warm flares", "compact"],
-    strengths: [],
-    weaknesses: [],
-    famousUses: [],
-    youtubeEmbeds: [],
-    imageUrls: [],
-    relatedLensIds: ["panavision-c-series-anamorphic"],
-    sources: [],
-    confidence: "needs verification",
-    notes: "Add verified focal lengths, squeeze ratio and mount variants later."
-  },
-  {
-    id: "panavision-c-series-anamorphic",
-    name: "Panavision C Series Anamorphic",
-    manufacturer: "Panavision",
-    yearIntroduced: 1968,
-    yearApproximate: true,
-    productionYears: "",
-    country: "United States",
-    factoryLocation: "",
-    type: ["prime", "anamorphic", "vintage"],
-    lineage: "original cinema lens",
-    importance: "legendary",
-    coverage: "",
-    mounts: [],
-    focalLengths: [],
-    tStops: [],
-    opticalFormula: "",
-    elements: null,
-    groups: null,
-    coating: "",
-    designFamily: "Panavision anamorphic",
-    donorLens: "",
-    rehousingInfo: "",
-    lookSummary: "A major anamorphic cinema reference with compact vintage personality; individual focal lengths vary.",
-    characteristics: ["anamorphic", "vintage", "Panavision", "warm flares", "scope"],
-    strengths: [],
-    weaknesses: [],
-    famousUses: [],
-    youtubeEmbeds: [],
-    imageUrls: [],
-    relatedLensIds: ["kowa-cine-prominar-anamorphic"],
-    sources: [],
-    confidence: "needs verification",
-    notes: "Rental-only ecosystem details and serial-specific history should be sourced."
-  },
-  {
-    id: "zeiss-high-speed-super-speed",
-    name: "Zeiss High Speed / Super Speed",
-    manufacturer: "Carl Zeiss",
-    yearIntroduced: 1975,
-    yearApproximate: true,
-    productionYears: "",
-    country: "Germany",
-    factoryLocation: "",
-    type: ["prime", "vintage", "spherical"],
-    lineage: "original cinema lens",
-    importance: "legendary",
-    coverage: "",
-    mounts: [],
-    focalLengths: [],
-    tStops: [],
-    opticalFormula: "",
-    elements: null,
-    groups: null,
-    coating: "",
-    designFamily: "Zeiss high-speed primes",
-    donorLens: "",
-    rehousingInfo: "",
-    lookSummary: "Fast vintage Zeiss cinema primes often valued for compact mechanics and crisp but characterful rendering.",
-    characteristics: ["vintage", "German", "high contrast", "fast", "spherical"],
-    strengths: [],
-    weaknesses: [],
-    famousUses: [],
-    youtubeEmbeds: [],
-    imageUrls: [],
-    relatedLensIds: ["arri-zeiss-master-prime"],
-    sources: [],
-    confidence: "needs verification",
-    notes: "Split Mk I, Mk II, Mk III and later variants when researched."
-  },
-  {
-    id: "canon-k35",
-    name: "Canon K35",
-    manufacturer: "Canon",
-    yearIntroduced: 1976,
-    yearApproximate: true,
-    productionYears: "",
-    country: "Japan",
-    factoryLocation: "",
-    type: ["prime", "vintage", "spherical", "still-lens-derived"],
-    lineage: "still lens derived",
-    importance: "legendary",
-    coverage: "",
-    mounts: [],
-    focalLengths: [],
-    tStops: [],
-    opticalFormula: "",
-    elements: null,
-    groups: null,
-    coating: "",
-    designFamily: "Canon K35 / FD-adjacent research",
-    donorLens: "needs source",
-    rehousingInfo: "",
-    lookSummary: "Large-image vintage Canon character with softer contrast and warm flare associations. Donor-lens lineage needs careful sourcing.",
-    characteristics: ["vintage", "Japanese", "warm", "full frame", "still-lens-derived"],
-    strengths: [],
-    weaknesses: [],
-    famousUses: [],
-    youtubeEmbeds: [],
-    imageUrls: [],
-    relatedLensIds: ["sigma-cine-ff-high-speed-prime"],
-    sources: [],
-    confidence: "needs verification",
-    notes: "Keep Canon FD and K35 relationships explicit and sourced before treating as fact."
-  },
-  {
-    id: "cooke-s4-i",
-    name: "Cooke S4/i",
-    manufacturer: "Cooke",
-    yearIntroduced: 1998,
-    yearApproximate: true,
-    productionYears: "",
-    country: "United Kingdom",
-    factoryLocation: "",
-    type: ["prime", "modern", "spherical"],
-    lineage: "original cinema lens",
-    importance: "legendary",
-    coverage: "",
-    mounts: [],
-    focalLengths: [],
-    tStops: [],
-    opticalFormula: "",
-    elements: null,
-    groups: null,
-    coating: "",
-    designFamily: "Cooke S4",
-    donorLens: "",
-    rehousingInfo: "",
-    lookSummary: "Modern Cooke prime family associated with smooth contrast and a warm, rounded cinema look.",
-    characteristics: ["modern", "Cooke", "warm", "spherical", "clean"],
-    strengths: [],
-    weaknesses: [],
-    famousUses: [],
-    youtubeEmbeds: [],
-    imageUrls: [],
-    relatedLensIds: ["cooke-speed-panchro-series-i"],
-    sources: [],
-    confidence: "needs verification",
-    notes: "Add exact launch timeline and /i metadata history later."
-  },
-  {
-    id: "arri-zeiss-master-prime",
-    name: "ARRI/Zeiss Master Prime",
-    manufacturer: "ARRI/Zeiss",
-    yearIntroduced: 2005,
-    yearApproximate: true,
-    productionYears: "",
-    country: "Germany",
-    factoryLocation: "",
-    type: ["prime", "modern", "spherical"],
-    lineage: "original cinema lens",
-    importance: "legendary",
-    coverage: "",
-    mounts: [],
-    focalLengths: [],
-    tStops: [],
-    opticalFormula: "",
-    elements: null,
-    groups: null,
-    coating: "",
-    designFamily: "Master Prime",
-    donorLens: "",
-    rehousingInfo: "",
-    lookSummary: "A modern high-performance prime reference, generally associated with speed, contrast and controlled aberrations.",
-    characteristics: ["modern", "German", "clean", "high contrast", "fast"],
-    strengths: [],
-    weaknesses: [],
-    famousUses: [],
-    youtubeEmbeds: [],
-    imageUrls: [],
-    relatedLensIds: ["zeiss-high-speed-super-speed"],
-    sources: [],
-    confidence: "needs verification",
-    notes: "Verify exact release year and specs from manufacturer materials."
-  },
-  {
-    id: "sigma-cine-ff-high-speed-prime",
-    name: "Sigma Cine FF High Speed Prime",
-    manufacturer: "Sigma",
-    yearIntroduced: 2016,
-    yearApproximate: true,
-    productionYears: "",
-    country: "Japan",
-    factoryLocation: "",
-    type: ["prime", "modern", "spherical", "still-lens-derived"],
-    lineage: "still lens derived",
-    importance: "important",
-    coverage: "full frame",
-    mounts: [],
-    focalLengths: [],
-    tStops: [],
-    opticalFormula: "",
-    elements: null,
-    groups: null,
-    coating: "",
-    designFamily: "Sigma Cine FF",
-    donorLens: "needs source",
-    rehousingInfo: "",
-    lookSummary: "Modern full-frame cine primes built around Sigma optical design language; donor and version details need source review.",
-    characteristics: ["modern", "Japanese", "full frame", "clean", "still-lens-derived"],
-    strengths: [],
-    weaknesses: [],
-    famousUses: [],
-    youtubeEmbeds: [],
-    imageUrls: [],
-    relatedLensIds: ["canon-k35"],
-    sources: [],
-    confidence: "needs verification",
-    notes: "Add mount availability and exact focal-length set once verified."
-  }
-];
-
 const state = {
   baseLenses: [],
   localLenses: [],
@@ -388,18 +37,32 @@ const state = {
     tag: "all",
     lineage: "all"
   },
-  scale: 1,
-  gameLens: null
+  mode: "cards",
+  gameLens: null,
+  loadError: ""
 };
 
 const els = {};
 
-document.addEventListener("DOMContentLoaded", init);
+document.addEventListener("DOMContentLoaded", () => {
+  init().catch((error) => {
+    console.error(error);
+    showFatalError();
+  });
+});
 
 async function init() {
   cacheEls();
   bindEvents();
-  state.baseLenses = await loadBaseLenses();
+
+  try {
+    state.baseLenses = await loadBaseLenses();
+  } catch (error) {
+    console.error(error);
+    state.loadError = "Could not load data/lenses.json. Check if the JSON is valid.";
+    state.baseLenses = [];
+  }
+
   state.localLenses = loadLocalLenses();
   refreshData();
   renderAll();
@@ -418,10 +81,12 @@ function cacheEls() {
     "importanceFilter",
     "tagFilter",
     "lineageFilter",
-    "scaleRange",
+    "clearFilters",
+    "scaleToggle",
     "eraStrip",
     "timelineViewport",
     "resultSummary",
+    "dataStatus",
     "randomLensButton",
     "randomLensButtonSecondary",
     "gameCard",
@@ -460,8 +125,12 @@ function bindEvents() {
     });
   });
 
-  els.scaleRange.addEventListener("input", (event) => {
-    state.scale = Number(event.target.value);
+  els.clearFilters.addEventListener("click", clearFilters);
+
+  els.scaleToggle.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-scale]");
+    if (!button) return;
+    state.mode = button.dataset.scale;
     renderTimeline();
   });
 
@@ -474,7 +143,7 @@ function bindEvents() {
   els.addLensForm.addEventListener("submit", saveNewLens);
 
   els.detailDrawer.addEventListener("click", (event) => {
-    if (event.target.matches("[data-close-drawer]")) {
+    if (event.target.closest("[data-close-drawer]")) {
       closeDrawer();
     }
   });
@@ -482,6 +151,7 @@ function bindEvents() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeDrawer();
+      if (els.addLensDialog.open) els.addLensDialog.close();
     }
   });
 
@@ -498,23 +168,23 @@ function bindEvents() {
 }
 
 async function loadBaseLenses() {
-  if (window.location.protocol === "file:") {
-    return starterLenses;
+  const response = await fetch(DATA_URL, { cache: "no-store" });
+  if (!response.ok) {
+    throw new Error(`Unable to load ${DATA_URL}: ${response.status}`);
   }
 
-  try {
-    const response = await fetch("data/lenses.json", { cache: "no-store" });
-    if (!response.ok) return starterLenses;
-    const payload = await response.json();
-    return Array.isArray(payload) ? payload : payload.lenses || starterLenses;
-  } catch {
-    return starterLenses;
+  const payload = await response.json();
+  const lenses = Array.isArray(payload) ? payload : payload.lenses;
+  if (!Array.isArray(lenses)) {
+    throw new Error(`${DATA_URL} must be an array or contain a lenses array.`);
   }
+  return lenses;
 }
 
 function loadLocalLenses() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    const value = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
+    return Array.isArray(value) ? value : [];
   } catch {
     return [];
   }
@@ -570,7 +240,7 @@ function normalizeLens(lens) {
     imageUrls: asArray(lens.imageUrls),
     relatedLensIds: asArray(lens.relatedLensIds),
     sources: asArray(lens.sources),
-    confidence: safeText(lens.confidence, "needs verification"),
+    confidence: normalizeConfidence(lens.confidence),
     notes: safeText(lens.notes)
   };
 }
@@ -594,7 +264,7 @@ function renderFilterOptions() {
 }
 
 function renderStats() {
-  const eras = getEraOptions(state.lenses);
+  const eras = getEraOptions(state.lenses).filter((era) => era !== "Unknown");
   els.totalLensCount.textContent = state.lenses.length;
   els.eraCount.textContent = eras.length;
   els.legendaryCount.textContent = state.lenses.filter((lens) => lens.importance === "legendary").length;
@@ -602,25 +272,50 @@ function renderStats() {
 
 function renderTimeline() {
   const lenses = getFilteredLenses();
-  renderEraStrip(lenses);
+  renderDataStatus();
+  renderModeButtons();
+  renderEraStrip();
 
   els.resultSummary.textContent = `${lenses.length} ${lenses.length === 1 ? "record" : "records"} shown`;
 
-  if (!lenses.length) {
-    els.timelineViewport.innerHTML = '<div class="empty-state">No matching lenses yet. Loosen a filter or import more data.</div>';
+  if (!state.lenses.length && state.loadError) {
+    els.timelineViewport.innerHTML = `<div class="empty-state error-state">${escapeHtml(state.loadError)}</div>`;
     return;
   }
 
-  if (state.scale === 0) {
+  if (!lenses.length) {
+    els.timelineViewport.innerHTML = '<div class="empty-state">No matching lenses. Try clearing filters.</div>';
+    return;
+  }
+
+  if (state.mode === "eras") {
     renderEraOverview(lenses);
-  } else if (state.scale === 2) {
+  } else if (state.mode === "dense") {
     renderCompactTimeline(lenses);
   } else {
     renderCardTimeline(lenses);
   }
 }
 
-function renderEraStrip(lenses) {
+function renderDataStatus() {
+  if (state.loadError) {
+    els.dataStatus.hidden = false;
+    els.dataStatus.textContent = state.loadError;
+  } else {
+    els.dataStatus.hidden = true;
+    els.dataStatus.textContent = "";
+  }
+}
+
+function renderModeButtons() {
+  els.scaleToggle.querySelectorAll("[data-scale]").forEach((button) => {
+    const active = button.dataset.scale === state.mode;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function renderEraStrip() {
   const eras = getEraOptions(state.lenses);
   els.eraStrip.innerHTML = "";
 
@@ -650,6 +345,26 @@ function setEraFilter(era) {
   renderTimeline();
 }
 
+function clearFilters() {
+  Object.keys(state.filters).forEach((key) => {
+    state.filters[key] = key === "search" ? "" : "all";
+  });
+
+  els.searchInput.value = "";
+  [
+    els.eraFilter,
+    els.manufacturerFilter,
+    els.typeFilter,
+    els.formatFilter,
+    els.importanceFilter,
+    els.tagFilter,
+    els.lineageFilter
+  ].forEach((select) => {
+    select.value = "all";
+  });
+  renderTimeline();
+}
+
 function renderEraOverview(lenses) {
   const groups = groupByDecade(lenses);
   const container = document.createElement("div");
@@ -658,28 +373,24 @@ function renderEraOverview(lenses) {
   Object.entries(groups).forEach(([decade, group]) => {
     const panel = document.createElement("article");
     panel.className = "era-panel";
-    const milestones = group
-      .slice()
-      .sort(sortByImportanceThenYear)
-      .slice(0, 4)
-      .map((lens) => {
-        const item = document.createElement("li");
-        const button = document.createElement("button");
-        button.type = "button";
-        button.innerHTML = `<span>${escapeHtml(lens.name)}</span><small>${formatYear(lens)}</small>`;
-        button.addEventListener("click", () => openLens(lens.id));
-        item.append(button);
-        return item;
-      });
-
+    const milestones = group.slice().sort(sortByImportanceThenYear).slice(0, 4);
     panel.innerHTML = `
       <header>
         <h3>${escapeHtml(decade)}</h3>
         <strong>${group.length}</strong>
       </header>
     `;
+
     const list = document.createElement("ul");
-    list.append(...milestones);
+    milestones.forEach((lens) => {
+      const item = document.createElement("li");
+      const button = document.createElement("button");
+      button.type = "button";
+      button.innerHTML = `<span>${escapeHtml(lens.name)}</span><small>${escapeHtml(formatYear(lens))}</small>`;
+      button.addEventListener("click", () => openLens(lens.id));
+      item.append(button);
+      list.append(item);
+    });
     panel.append(list);
     container.append(panel);
   });
@@ -737,6 +448,16 @@ function createLensCard(lens) {
   card.type = "button";
   card.className = "lens-card";
   card.dataset.importance = lens.importance;
+
+  const typeBadges = lens.type
+    .slice(0, 3)
+    .map((type) => `<span class="data-pill">${escapeHtml(type)}</span>`)
+    .join("");
+  const tagBadges = lens.characteristics
+    .slice(0, 3)
+    .map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`)
+    .join("");
+
   card.innerHTML = `
     <div class="card-topline">
       <span class="year-pill">${escapeHtml(formatYear(lens))}</span>
@@ -745,13 +466,8 @@ function createLensCard(lens) {
     <h3>${escapeHtml(lens.name)}</h3>
     <p class="manufacturer">${escapeHtml(lens.manufacturer)}</p>
     <p class="look-summary">${escapeHtml(lens.lookSummary)}</p>
-    <div class="card-meta">
-      ${lens.type.slice(0, 3).map((type) => `<span class="data-pill">${escapeHtml(type)}</span>`).join("")}
-      ${lens.coverage ? `<span class="data-pill">${escapeHtml(lens.coverage)}</span>` : ""}
-    </div>
-    <div class="chip-list">
-      ${lens.characteristics.slice(0, 5).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("")}
-    </div>
+    <div class="card-meta">${typeBadges}</div>
+    <div class="chip-list">${tagBadges}</div>
   `;
   card.addEventListener("click", () => openLens(lens.id));
   return card;
@@ -783,7 +499,7 @@ function renderLensDetails(lens) {
     <div class="drawer-meta">
       <span class="year-pill">${escapeHtml(formatYear(lens))}</span>
       <span class="importance-pill ${escapeHtml(lens.importance)}">${escapeHtml(lens.importance)}</span>
-      <span class="confidence">${escapeHtml(lens.confidence)}</span>
+      <span class="confidence ${escapeHtml(confidenceClass(lens.confidence))}">${escapeHtml(lens.confidence)}</span>
     </div>
     <p>${escapeHtml(lens.lookSummary)}</p>
   `;
@@ -794,22 +510,23 @@ function renderLensDetails(lens) {
     ["Production years", lens.productionYears],
     ["Country", lens.country],
     ["Factory / location", lens.factoryLocation],
-    ["Original use", lens.lineage],
+    ["Type", lens.type],
+    ["Lineage", lens.lineage],
+    ["Coverage", lens.coverage],
     ["Mounts", lens.mounts],
-    ["Coverage / format", lens.coverage],
     ["Focal lengths", lens.focalLengths],
     ["T-stops / f-stops", lens.tStops],
     ["Optical formula", lens.opticalFormula],
-    ["Elements", lens.elements],
-    ["Groups", lens.groups],
+    ["Elements / groups", formatElementsGroups(lens)],
     ["Coating", lens.coating],
     ["Design family", lens.designFamily],
-    ["Donor / base lens", lens.donorLens],
-    ["Rehousing info", lens.rehousingInfo]
+    ["Donor lens", lens.donorLens],
+    ["Rehousing info", lens.rehousingInfo],
+    ["Confidence level", lens.confidence]
   ];
   fragment.append(createDetailSection("Technical and historical fields", createFieldGrid(factFields)));
 
-  fragment.append(createTagSection("Type and look tags", [...lens.type, ...lens.characteristics]));
+  fragment.append(createListSection("Characteristics", lens.characteristics));
   fragment.append(createListSection("Strengths", lens.strengths));
   fragment.append(createListSection("Weaknesses", lens.weaknesses));
   fragment.append(createListSection("Famous uses", lens.famousUses));
@@ -845,16 +562,6 @@ function createFieldGrid(fields) {
   });
 
   return grid;
-}
-
-function createTagSection(title, tags) {
-  const wrapper = document.createElement("div");
-  wrapper.className = "detail-tags";
-  const cleanTags = uniqueValues(tags.filter(Boolean));
-  wrapper.innerHTML = cleanTags.length
-    ? cleanTags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("")
-    : '<span class="tag">none yet</span>';
-  return createDetailSection(title, wrapper);
 }
 
 function createListSection(title, items) {
@@ -940,14 +647,17 @@ function createSourceSection(sources) {
 }
 
 function openRandomLens() {
-  const lenses = getFilteredLenses();
+  const lenses = getFilteredLenses().length ? getFilteredLenses() : state.lenses;
   if (!lenses.length) return;
   const lens = lenses[Math.floor(Math.random() * lenses.length)];
   openLens(lens.id);
 }
 
 function startGame() {
-  if (!state.lenses.length) return;
+  if (!state.lenses.length) {
+    els.gameCard.innerHTML = '<div class="game-prompt">Load lens records to start the era challenge.</div>';
+    return;
+  }
   state.gameLens = state.lenses[Math.floor(Math.random() * state.lenses.length)];
   renderGame();
 }
@@ -985,7 +695,8 @@ function renderGame(resultText = "") {
 
 function buildGameOptions(correctEra) {
   const eras = getEraOptions(state.lenses).filter((era) => era !== "Unknown");
-  const shuffled = eras.filter((era) => era !== correctEra).sort(() => Math.random() - 0.5);
+  const pool = uniqueValues([correctEra, ...eras]).filter(Boolean);
+  const shuffled = pool.filter((era) => era !== correctEra).sort(() => Math.random() - 0.5);
   return [correctEra, ...shuffled.slice(0, 3)].sort(() => Math.random() - 0.5);
 }
 
@@ -1001,17 +712,19 @@ function saveNewLens(event) {
   const name = safeText(formData.get("name"), "Untitled lens");
   const manufacturer = safeText(formData.get("manufacturer"), "Unknown manufacturer");
   const yearIntroduced = numberOrNull(formData.get("yearIntroduced"));
+  const type = splitList(formData.get("type"));
+  const characteristics = splitList(formData.get("characteristics"));
   const newLens = normalizeLens({
     id: slugify(`${manufacturer}-${name}-${yearIntroduced || "unknown"}`),
     name,
     manufacturer,
     yearIntroduced,
-    yearApproximate: true,
+    yearApproximate: Boolean(yearIntroduced),
     productionYears: "",
     country: "",
     factoryLocation: "",
-    type: splitList(formData.get("type")),
-    lineage: inferLineage(splitList(formData.get("type")), splitList(formData.get("characteristics"))),
+    type,
+    lineage: inferLineage(type, characteristics),
     importance: safeText(formData.get("importance"), "niche"),
     coverage: safeText(formData.get("coverage")),
     mounts: [],
@@ -1025,7 +738,7 @@ function saveNewLens(event) {
     donorLens: "",
     rehousingInfo: "",
     lookSummary: safeText(formData.get("lookSummary"), "No look description yet."),
-    characteristics: splitList(formData.get("characteristics")),
+    characteristics,
     strengths: [],
     weaknesses: [],
     famousUses: [],
@@ -1041,7 +754,6 @@ function saveNewLens(event) {
   saveLocalLenses();
   refreshData();
   renderAll();
-  els.addLensForm.reset();
   els.addLensDialog.close();
   openLens(newLens.id);
 }
@@ -1202,6 +914,12 @@ function formatValue(value) {
   return String(value);
 }
 
+function formatElementsGroups(lens) {
+  const elements = lens.elements ? `${lens.elements} elements` : "";
+  const groups = lens.groups ? `${lens.groups} groups` : "";
+  return [elements, groups].filter(Boolean).join(" / ");
+}
+
 function splitList(value) {
   return safeText(value)
     .split(",")
@@ -1233,6 +951,16 @@ function numberOrNull(value) {
   if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
+}
+
+function normalizeConfidence(value) {
+  const confidence = safeText(value, "needs verification").toLowerCase();
+  if (confidence === "verified" || confidence === "medium") return confidence;
+  return "needs verification";
+}
+
+function confidenceClass(confidence) {
+  return confidence.replace(/\s+/g, "-");
 }
 
 function safeText(value, fallback = "") {
@@ -1292,4 +1020,19 @@ function escapeHtml(value) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
+}
+
+function showFatalError() {
+  const message = "Could not load data/lenses.json. Check if the JSON is valid.";
+  const resultSummary = document.getElementById("resultSummary");
+  const timelineViewport = document.getElementById("timelineViewport");
+  const dataStatus = document.getElementById("dataStatus");
+  if (resultSummary) resultSummary.textContent = "0 records shown";
+  if (dataStatus) {
+    dataStatus.hidden = false;
+    dataStatus.textContent = message;
+  }
+  if (timelineViewport) {
+    timelineViewport.innerHTML = `<div class="empty-state error-state">${message}</div>`;
+  }
 }

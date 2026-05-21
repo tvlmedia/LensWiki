@@ -19,7 +19,8 @@
         </a>
         <div class="nav-actions">
           <a href="#timeline">Timeline</a>
-          <a href="#add-lens">Add Lens</a>
+          <a href="#random">Random Lens</a>
+          <a href="#research-tools">Research Tools</a>
           <button class="ghost-button small" id="randomLensButton" type="button">Random Lens</button>
         </div>
       </nav>
@@ -28,13 +29,9 @@
         <p class="eyebrow">Chronological cinema optics archive</p>
         <h1>Cinema Lens Timeline</h1>
         <p class="hero-subtitle">
-          A visual research database for cinema lenses, optical history, rehousings,
+          A visual archive of cinema lenses, optical history, rehousings,
           design families and sample footage.
         </p>
-        <div class="hero-actions" aria-label="Primary actions">
-          <a class="primary-button" href="#timeline">Explore Timeline</a>
-          <a class="secondary-button" href="#add-lens">Add Research Note</a>
-        </div>
       </div>
 
       <div class="hero-stats" aria-label="Archive summary">
@@ -54,59 +51,6 @@
     </header>
 
     <main>
-      <section class="control-band" aria-label="Archive controls">
-        <div class="search-wrap">
-          <label for="searchInput">Search archive</label>
-          <input
-            id="searchInput"
-            type="search"
-            placeholder="Name, maker, country, tag, film, formula..."
-            autocomplete="off"
-          >
-        </div>
-
-        <div class="filter-grid">
-          <label>
-            Era
-            <select id="eraFilter"></select>
-          </label>
-          <label>
-            Manufacturer
-            <select id="manufacturerFilter"></select>
-          </label>
-          <label>
-            Type
-            <select id="typeFilter"></select>
-          </label>
-          <label>
-            Format
-            <select id="formatFilter"></select>
-          </label>
-          <label>
-            Importance
-            <select id="importanceFilter"></select>
-          </label>
-          <label>
-            Look tag
-            <select id="tagFilter"></select>
-          </label>
-          <label>
-            Lineage
-            <select id="lineageFilter"></select>
-          </label>
-        </div>
-
-        <div class="timeline-scale" aria-label="Timeline density">
-          <span>Timeline scale</span>
-          <input id="scaleRange" type="range" min="0" max="2" value="1" step="1">
-          <div class="scale-labels" aria-hidden="true">
-            <span>Eras</span>
-            <span>Cards</span>
-            <span>Dense</span>
-          </div>
-        </div>
-      </section>
-
       <section class="timeline-section" id="timeline">
         <div class="section-heading">
           <p class="eyebrow">Timeline view</p>
@@ -114,14 +58,67 @@
           <p id="resultSummary">Loading lens records...</p>
         </div>
 
+        <div class="control-band" aria-label="Archive controls">
+          <div class="search-wrap">
+            <label for="searchInput">Search archive</label>
+            <input
+              id="searchInput"
+              type="search"
+              placeholder="Name, maker, country, tag, film, formula..."
+              autocomplete="off"
+            >
+          </div>
+
+          <div class="filter-grid">
+            <label>
+              Era
+              <select id="eraFilter"></select>
+            </label>
+            <label>
+              Manufacturer
+              <select id="manufacturerFilter"></select>
+            </label>
+            <label>
+              Type
+              <select id="typeFilter"></select>
+            </label>
+            <label>
+              Format
+              <select id="formatFilter"></select>
+            </label>
+            <label>
+              Importance
+              <select id="importanceFilter"></select>
+            </label>
+            <label>
+              Look tag
+              <select id="tagFilter"></select>
+            </label>
+            <label>
+              Lineage
+              <select id="lineageFilter"></select>
+            </label>
+          </div>
+
+          <div class="timeline-actions">
+            <div class="timeline-scale" id="scaleToggle" aria-label="Timeline scale">
+              <button class="scale-button" type="button" data-scale="eras" aria-pressed="false">Eras</button>
+              <button class="scale-button is-active" type="button" data-scale="cards" aria-pressed="true">Cards</button>
+              <button class="scale-button" type="button" data-scale="dense" aria-pressed="false">Dense</button>
+            </div>
+            <button class="ghost-button clear-filters" id="clearFilters" type="button">Clear filters</button>
+          </div>
+        </div>
+
+        <div class="data-status" id="dataStatus" hidden></div>
         <div class="era-strip" id="eraStrip" aria-label="Decade shortcuts"></div>
         <div class="timeline-viewport" id="timelineViewport" aria-live="polite"></div>
       </section>
 
-      <section class="discovery-grid" aria-label="Discovery tools">
+      <section class="discovery-grid" id="random" aria-label="Discovery tools">
         <article class="discovery-panel">
           <div>
-            <p class="eyebrow">Lens Nerd Mode</p>
+            <p class="eyebrow">Bonus tools</p>
             <h2>Random discovery</h2>
           </div>
           <p id="randomLensCopy">
@@ -140,25 +137,29 @@
         </article>
       </section>
 
-      <section class="data-workbench" id="add-lens">
-        <div class="section-heading">
-          <p class="eyebrow">Local research workbench</p>
-          <h2>Add, export and import lens data</h2>
-          <p>
-            New records are stored in this browser until exported. The public starter
-            database lives in <code>data/lenses.json</code>.
-          </p>
-        </div>
+      <section class="research-tools" id="research-tools">
+        <details>
+          <summary>
+            <span>
+              <span class="eyebrow">Research Tools</span>
+              <strong>Add, export and import lens data</strong>
+            </span>
+            <span class="summary-hint">Open tools</span>
+          </summary>
 
-        <div class="workbench-actions">
-          <button class="primary-button" id="openAddLens" type="button">Add Lens</button>
-          <button class="secondary-button" id="exportJson" type="button">Export JSON</button>
-          <label class="file-button" for="importJson">Import JSON</label>
-          <input id="importJson" type="file" accept="application/json,.json">
-          <button class="ghost-button" id="clearLocalData" type="button">Clear Local Adds</button>
-        </div>
+          <div class="research-tools-body">
+            <p>Local additions are stored in this browser until exported.</p>
+            <div class="workbench-actions">
+              <button class="primary-button" id="openAddLens" type="button">Add Lens</button>
+              <button class="secondary-button" id="exportJson" type="button">Export JSON</button>
+              <label class="file-button" for="importJson">Import JSON</label>
+              <input id="importJson" type="file" accept="application/json,.json">
+              <button class="ghost-button" id="clearLocalData" type="button">Clear Local Adds</button>
+            </div>
 
-        <div class="local-data-status" id="localDataStatus"></div>
+            <div class="local-data-status" id="localDataStatus"></div>
+          </div>
+        </details>
       </section>
     </main>
 
@@ -243,14 +244,6 @@
         </div>
       </form>
     </dialog>
-
-    <template id="fieldTemplate">
-      <div class="detail-field">
-        <dt></dt>
-        <dd></dd>
-      </div>
-    </template>
-
     <script src="script.js" defer></script>
   </body>
 </html>
