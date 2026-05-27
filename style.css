@@ -1892,10 +1892,24 @@ button.dense-row:hover {
   background: rgba(0, 0, 0, 0.62);
 }
 
-.youtube-label {
+.youtube-meta {
+  display: grid;
+  gap: 2px;
+}
+
+.youtube-label,
+.youtube-platform {
   color: var(--muted);
   font-size: 0.82rem;
   line-height: 1.35;
+}
+
+.youtube-label {
+  color: #cfd6e2;
+}
+
+.youtube-platform {
+  color: var(--subtle);
 }
 
 @media (max-width: 1040px) {

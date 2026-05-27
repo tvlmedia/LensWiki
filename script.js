@@ -45,6 +45,16 @@ const NORMALIZED_ARRAY_FIELDS = new Set([
   "famousUses",
   "focalLengthSpecs"
 ]);
+const VIDEO_SAMPLE_FIELDS = [
+  "youtubeSamples",
+  "videoSamples",
+  "videos",
+  "videoLinks",
+  "sampleFootage",
+  "sampleFootageLinks",
+  "footageSamples",
+  "youtubeEmbeds"
+];
 const COMMA_ARRAY_FIELDS = new Set(["mounts", "focalLengths", "tStops", "type"]);
 const LINE_ARRAY_FIELDS = new Set(["strengths", "weaknesses", "characteristics", "closeFocus", "formatCoverageNotes"]);
 const REHOUSING_FIELD_KEYS = new Set([
@@ -597,6 +607,7 @@ function normalizeLens(lens, fileName) {
     weaknesses: normalizeArrayField(lens.weaknesses, getArrayFieldOptions("weaknesses")),
     famousUses: normalizeArrayField(lens.famousUses, { fieldName: "famousUses", preserveObjects: true }),
     youtubeEmbeds: normalizeYouTubeSamples(lens.youtubeEmbeds),
+    videoSamples: getLensVideoSamples(lens),
     imageUrls: asArray(lens.imageUrls),
     relatedLensIds: asArray(lens.relatedLensIds),
     sources: normalizeArrayField(lens.sources, { fieldName: "sources", preserveObjects: true }),
@@ -1089,7 +1100,7 @@ function renderLensDetails(lens) {
   appendIf(fragment, createEditorialSection("Overview", getOverviewSummary(lens)));
   appendIf(fragment, createEditorialSection("Look", lens.lookSummary));
   appendIf(fragment, createFlarePromptSection(lens));
-  appendIf(fragment, createYoutubeSection(lens.youtubeEmbeds));
+  appendIf(fragment, createYoutubeSection(lens));
   appendIf(fragment, createDetailSection("Key specs", createFieldGrid(factFields)));
   appendIf(fragment, createFocalLengthSpecsSection(lens.focalLengthSpecs));
   appendIf(fragment, createListSection("Character", lens.characteristics));
@@ -1770,8 +1781,8 @@ function formatSpecNotes(spec) {
   ].filter(Boolean).join(" · ");
 }
 
-function createYoutubeSection(urls) {
-  const samples = getYouTubeSamples(urls);
+function createYoutubeSection(lensOrSamples) {
+  const samples = getLensVideoSamples(lensOrSamples);
   if (!samples.length) return null;
 
   const grid = document.createElement("div");
@@ -1792,11 +1803,14 @@ function createYoutubeSection(urls) {
     `;
 
     card.append(thumb);
-    if (sample.label) {
-      const label = document.createElement("span");
-      label.className = "youtube-label";
-      label.textContent = sample.label;
-      card.append(label);
+    if (sample.label || sample.platform) {
+      const meta = document.createElement("span");
+      meta.className = "youtube-meta";
+      meta.innerHTML = `
+        ${sample.label ? `<span class="youtube-label">${escapeHtml(sample.label)}</span>` : ""}
+        ${sample.platform ? `<span class="youtube-platform">${escapeHtml(sample.platform)}</span>` : ""}
+      `;
+      card.append(meta);
     }
 
     grid.append(card);
@@ -2598,13 +2612,37 @@ function normalizeYouTubeSamples(value) {
   return getYouTubeSamples(value).map((sample) => sample.url);
 }
 
+function getLensVideoSamples(value) {
+  if (!value) return [];
+
+  if (Array.isArray(value) || typeof value === "string") {
+    return getYouTubeSamples(value);
+  }
+
+  if (typeof value !== "object") return [];
+
+  const samples = [];
+  const seen = new Set();
+  VIDEO_SAMPLE_FIELDS.forEach((fieldName) => {
+    getYouTubeSamples(value[fieldName]).forEach((sample) => {
+      const key = sample.id || sample.url;
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+      samples.push(sample);
+    });
+  });
+
+  return samples;
+}
+
 function getYouTubeSamples(value) {
   const urls = [];
   const seen = new Set();
   normalizeArrayField(value, { fieldName: "youtubeEmbeds", separator: "lines", preserveObjects: true }).forEach((item) => {
     const sample = getYouTubeSample(item);
-    if (!sample || seen.has(sample.id)) return;
-    seen.add(sample.id);
+    const key = sample?.id || sample?.url;
+    if (!sample || !key || seen.has(key)) return;
+    seen.add(key);
     urls.push(sample);
   });
   return urls;
@@ -2613,25 +2651,33 @@ function getYouTubeSamples(value) {
 function getYouTubeSample(value) {
   let source = value;
   let label = "";
+  let platform = "";
+  let thumbnailUrl = "";
   if (value && typeof value === "object") {
-    source = value.url || value.href || value.videoId || value.id || value.embedUrl || "";
-    label = safeText(value.label || value.title);
+    source = value.url
+      || value.href
+      || value.videoUrl
+      || value.link
+      || value.watchUrl
+      || value.embedUrl
+      || value.youtubeUrl
+      || value.youtubeId
+      || value.videoId
+      || value.id
+      || "";
+    label = safeText(value.label || value.title || value.name);
+    platform = safeText(value.platform || value.source || value.provider);
+    thumbnailUrl = normalizeMediaUrl(value.thumbnailUrl || value.thumbnail || value.imageUrl || value.image || value.poster);
   }
 
   const raw = cleanArrayItem(source);
   if (!raw) return null;
 
   const iframeSrc = raw.match(/\bsrc=["']([^"']+)["']/i)?.[1];
-  let text = iframeSrc || raw;
-  if (text.startsWith("//")) {
-    text = `https:${text}`;
-  }
-  if (/^(www\.|m\.)?youtube\.com|^youtu\.be/i.test(text)) {
-    text = `https://${text}`;
-  }
+  let text = normalizeMediaUrl(iframeSrc || raw);
 
   const plainId = text.match(/^[A-Za-z0-9_-]{11}$/)?.[0];
-  if (plainId) return buildYouTubeSample(plainId, label);
+  if (plainId) return buildYouTubeSample(plainId, { label, platform, thumbnailUrl });
 
   try {
     const url = new URL(text);
@@ -2649,11 +2695,13 @@ function getYouTubeSample(value) {
     }
 
     id = normalizeYouTubeId(id);
-    return id ? buildYouTubeSample(id, label) : null;
+    if (id) return buildYouTubeSample(id, { label, platform, thumbnailUrl });
+    if (thumbnailUrl) return buildVideoSample(text, { label, platform, thumbnailUrl });
+    return null;
   } catch (_error) {
     const embeddedId = text.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{6,})/i)?.[1];
     const id = normalizeYouTubeId(embeddedId);
-    return id ? buildYouTubeSample(id, label) : null;
+    return id ? buildYouTubeSample(id, { label, platform, thumbnailUrl }) : null;
   }
 }
 
@@ -2661,13 +2709,38 @@ function normalizeYouTubeId(value) {
   return safeText(value).split(/[?&#/]/)[0].replace(/[^A-Za-z0-9_-]/g, "");
 }
 
-function buildYouTubeSample(id, label = "") {
+function normalizeMediaUrl(value) {
+  let text = cleanArrayItem(value);
+  if (!text) return "";
+  if (text.startsWith("//")) {
+    text = `https:${text}`;
+  }
+  if (/^(www\.|m\.)?youtube\.com|^youtu\.be|^img\.youtube\.com/i.test(text)) {
+    text = `https://${text}`;
+  }
+  return text;
+}
+
+function buildYouTubeSample(id, options = {}) {
+  const platform = options.platform || "YouTube";
   return {
     id,
-    label,
+    label: options.label || "",
+    platform,
     url: `https://www.youtube.com/watch?v=${id}`,
     embedUrl: `https://www.youtube.com/embed/${id}`,
-    thumbnailUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`
+    thumbnailUrl: options.thumbnailUrl || `https://img.youtube.com/vi/${id}/hqdefault.jpg`
+  };
+}
+
+function buildVideoSample(url, options = {}) {
+  return {
+    id: url,
+    label: options.label || "",
+    platform: options.platform || "",
+    url,
+    embedUrl: "",
+    thumbnailUrl: options.thumbnailUrl
   };
 }
 
@@ -2765,7 +2838,14 @@ function getAdminEditField(fieldName) {
 }
 
 function stripJsonPropertyPrefix(value) {
-  return safeText(value).replace(/^\s*["']?[A-Za-z][A-Za-z0-9_-]*["']?\s*:\s*/u, "").trim();
+  const text = safeText(value).trim();
+  const match = text.match(/^\s*(?:"([A-Za-z][A-Za-z0-9_-]*)"|'([A-Za-z][A-Za-z0-9_-]*)'|([A-Za-z][A-Za-z0-9_-]*))\s*:\s*/u);
+  if (!match) return text;
+
+  const fieldName = match[1] || match[2] || match[3] || "";
+  if (!isKnownLensFieldName(fieldName)) return text;
+
+  return text.slice(match[0].length).trim();
 }
 
 function parseObjectArraySnippet(value, preferredFieldName = "") {
@@ -2784,12 +2864,25 @@ function parseObjectArraySnippet(value, preferredFieldName = "") {
 
 function hasJsonArraySyntaxArtifact(value) {
   const text = safeText(value);
-  return /^["']?[A-Za-z][A-Za-z0-9_-]*["']?\s*:/u.test(text)
+  return looksLikeJsonPropertyPrefix(text)
     || text === "["
     || text === "]"
     || isJsonSyntaxOnly(text)
     || /^\[/.test(text)
     || /\]$/.test(text);
+}
+
+function looksLikeJsonPropertyPrefix(value) {
+  const text = safeText(value);
+  const match = text.match(/^\s*(?:"([A-Za-z][A-Za-z0-9_-]*)"|'([A-Za-z][A-Za-z0-9_-]*)'|([A-Za-z][A-Za-z0-9_-]*))\s*:/u);
+  const fieldName = match?.[1] || match?.[2] || match?.[3] || "";
+  return Boolean(fieldName && isKnownLensFieldName(fieldName));
+}
+
+function isKnownLensFieldName(fieldName) {
+  return NORMALIZED_ARRAY_FIELDS.has(fieldName)
+    || VIDEO_SAMPLE_FIELDS.includes(fieldName)
+    || ADMIN_EDIT_FIELDS.some((field) => field.key === fieldName);
 }
 
 function isJsonSyntaxOnly(value) {
