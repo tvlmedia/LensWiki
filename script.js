@@ -81,6 +81,7 @@ const state = {
   activeQuickChip: "",
   activeLensId: "",
   editingLensId: "",
+  editDraft: null,
   drawerMessage: null,
   admin: {
     client: null,
@@ -214,12 +215,19 @@ function bindEvents() {
   });
 
   els.drawerContent.addEventListener("click", handleDrawerAction);
+  els.drawerContent.addEventListener("input", handleDrawerInput);
   els.drawerContent.addEventListener("submit", handleDrawerSubmit);
 
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeDrawer();
     }
+  });
+
+  window.addEventListener("beforeunload", (event) => {
+    if (!hasDirtyPublicDraft()) return;
+    event.preventDefault();
+    event.returnValue = "";
   });
 }
 
@@ -815,11 +823,14 @@ function renderTags(tags, limit = 3) {
 }
 
 function openLens(id) {
+  if (hasDirtyPublicDraft() && !confirm("Discard unsaved changes?")) return;
+  if (hasDirtyPublicDraft()) clearCurrentPublicDraft();
   const lens = state.lenses.find((item) => item.id === id);
   if (!lens) return;
 
   state.activeLensId = id;
   state.editingLensId = "";
+  state.editDraft = null;
   state.drawerMessage = null;
   els.drawerContent.replaceChildren(renderLensDetails(lens));
   els.detailDrawer.classList.add("is-open");
@@ -828,11 +839,14 @@ function openLens(id) {
 }
 
 function closeDrawer() {
+  if (hasDirtyPublicDraft() && !confirm("Discard unsaved changes?")) return;
+  if (hasDirtyPublicDraft()) clearCurrentPublicDraft();
   els.detailDrawer.classList.remove("is-open");
   els.detailDrawer.setAttribute("aria-hidden", "true");
   document.body.classList.remove("drawer-open");
   state.activeLensId = "";
   state.editingLensId = "";
+  state.editDraft = null;
   state.drawerMessage = null;
 }
 
@@ -841,7 +855,7 @@ function rerenderActiveLens() {
   const lens = state.lenses.find((item) => item.id === state.activeLensId);
   if (!lens) return;
   els.drawerContent.replaceChildren(
-    state.editingLensId === lens.id ? renderLensEditForm(lens) : renderLensDetails(lens)
+    state.editingLensId === lens.id && state.editDraft ? renderLensEditForm(lens) : renderLensDetails(lens)
   );
 }
 
@@ -852,16 +866,38 @@ function handleDrawerAction(event) {
   if (action.dataset.drawerAction === "edit-lens") {
     const lens = getActiveLens();
     if (!lens || !state.admin.isAdmin) return;
-    state.editingLensId = lens.id;
+    startLensEdit(lens);
+  }
+
+  if (action.dataset.drawerAction === "cancel-edit") {
+    if (hasDirtyPublicDraft() && !confirm("Discard unsaved changes?")) return;
+    if (hasDirtyPublicDraft()) clearCurrentPublicDraft();
+    state.editingLensId = "";
+    state.editDraft = null;
     state.drawerMessage = null;
     rerenderActiveLens();
   }
 
-  if (action.dataset.drawerAction === "cancel-edit") {
-    state.editingLensId = "";
-    state.drawerMessage = null;
-    rerenderActiveLens();
+  if (action.dataset.drawerAction === "restore-draft") {
+    restorePublicAutosaveDraft();
   }
+
+  if (action.dataset.drawerAction === "discard-draft") {
+    discardPublicAutosaveDraft();
+  }
+}
+
+function handleDrawerInput(event) {
+  if (!state.editDraft || !event.target.closest("#lensEditForm")) return;
+  const fieldName = event.target.name;
+  if (!fieldName) return;
+
+  state.editDraft.values[fieldName] = event.target.type === "checkbox"
+    ? event.target.checked
+    : event.target.value;
+  state.editDraft.dirty = true;
+  persistPublicDraft();
+  updatePublicDraftStatus();
 }
 
 function handleDrawerSubmit(event) {
@@ -875,6 +911,25 @@ function handleDrawerSubmit(event) {
 
 function getActiveLens() {
   return state.lenses.find((item) => item.id === state.activeLensId);
+}
+
+function startLensEdit(lens) {
+  state.editingLensId = lens.id;
+  state.editDraft = createPublicEditDraft(lens);
+  state.drawerMessage = null;
+  rerenderActiveLens();
+}
+
+function createPublicEditDraft(lens) {
+  const storageKey = getPublicDraftStorageKey(lens.id);
+  const autosaved = readStoredDraft(storageKey);
+  return {
+    lensId: lens.id,
+    storageKey,
+    values: createDraftValues(lens, ADMIN_EDIT_FIELDS),
+    dirty: false,
+    autosavedValues: autosaved?.values || null
+  };
 }
 
 function renderLensDetails(lens) {
@@ -930,6 +985,10 @@ function renderLensDetails(lens) {
 }
 
 function renderLensEditForm(lens) {
+  if (!state.editDraft) {
+    state.editDraft = createPublicEditDraft(lens);
+  }
+  const draft = state.editDraft;
   const form = document.createElement("form");
   form.className = "lens-edit-form";
   form.id = "lensEditForm";
@@ -937,25 +996,38 @@ function renderLensEditForm(lens) {
   form.innerHTML = `
     <header class="drawer-title edit-title">
       <p class="eyebrow">Update lens</p>
-      <h2 id="drawerTitle">${escapeHtml(lens.name)}</h2>
+      <h2 id="drawerTitle">${escapeHtml(draft.values.name || lens.name)}</h2>
       <div class="admin-lens-actions">
         <button class="primary-button small" type="submit">Save changes</button>
         <button class="ghost-button small" type="button" data-drawer-action="cancel-edit">Cancel</button>
       </div>
+      <p class="edit-dirty-status" data-draft-status ${draft.dirty ? "" : "hidden"}>Unsaved changes</p>
     </header>
+    ${state.drawerMessage ? `
+      <p class="drawer-message ${escapeHtml(state.drawerMessage.tone || "")}">${escapeHtml(state.drawerMessage.text)}</p>
+    ` : ""}
+    ${draft.autosavedValues ? `
+      <div class="draft-restore">
+        <p>Unsaved draft found. Restore draft?</p>
+        <div>
+          <button class="secondary-button small" type="button" data-drawer-action="restore-draft">Restore draft</button>
+          <button class="ghost-button small" type="button" data-drawer-action="discard-draft">Discard draft</button>
+        </div>
+      </div>
+    ` : ""}
     <div class="edit-grid">
-      ${ADMIN_EDIT_FIELDS.map((field) => renderEditField(lens, field)).join("")}
+      ${ADMIN_EDIT_FIELDS.map((field) => renderEditField(draft, field)).join("")}
     </div>
   `;
   return form;
 }
 
-function renderEditField(lens, field) {
-  const value = serializeEditValue(lens[field.key], field.type);
+function renderEditField(draft, field) {
+  const value = draft.values[field.key] ?? "";
   if (field.type === "checkbox") {
     return `
       <label class="edit-field edit-field-checkbox">
-        <input name="${escapeHtml(field.key)}" type="checkbox" ${lens[field.key] ? "checked" : ""}>
+        <input name="${escapeHtml(field.key)}" type="checkbox" ${value ? "checked" : ""}>
         <span>${escapeHtml(field.label)}</span>
       </label>
     `;
@@ -1004,7 +1076,7 @@ function createDrawerMessage() {
 
 async function saveLensEdits(form) {
   const lens = getActiveLens();
-  if (!lens || !state.admin.isAdmin || !state.admin.client) return;
+  if (!lens || !state.editDraft || !state.admin.isAdmin || !state.admin.client) return;
 
   const submitButton = form.querySelector('button[type="submit"]');
   if (submitButton) {
@@ -1012,7 +1084,7 @@ async function saveLensEdits(form) {
     submitButton.textContent = "Saving...";
   }
 
-  const updatedLens = buildUpdatedLensFromForm(lens, form);
+  const updatedLens = buildUpdatedLensFromDraft(lens, state.editDraft);
   const saveResult = await saveLensToSupabase(updatedLens);
 
   if (saveResult.error) {
@@ -1025,6 +1097,8 @@ async function saveLensEdits(form) {
   replaceLens(normalized);
   state.activeLensId = normalized.id;
   state.editingLensId = "";
+  clearStoredDraft(state.editDraft.storageKey);
+  state.editDraft = null;
   state.drawerMessage = { tone: "success", text: "Lens updated." };
   renderAll();
   rerenderActiveLens();
@@ -1060,17 +1134,16 @@ async function saveLensToSupabase(lens) {
   );
 }
 
-function buildUpdatedLensFromForm(lens, form) {
+function buildUpdatedLensFromDraft(lens, draft) {
   const updated = { ...toExportLens(lens) };
-  const formData = new FormData(form);
 
   ADMIN_EDIT_FIELDS.forEach((field) => {
     if (field.type === "checkbox") {
-      updated[field.key] = formData.has(field.key);
+      updated[field.key] = Boolean(draft.values[field.key]);
       return;
     }
 
-    const rawValue = safeText(formData.get(field.key));
+    const rawValue = safeText(draft.values[field.key]);
     updated[field.key] = parseEditValue(rawValue, field.type, field.key);
   });
 
@@ -1078,6 +1151,87 @@ function buildUpdatedLensFromForm(lens, form) {
   updated.slug = updated.slug || lens.slug || slugify(lens.id);
   updated.fileName = lens.fileName || lens.sourceFile || `${updated.slug}.json`;
   return updated;
+}
+
+function restorePublicAutosaveDraft() {
+  if (!state.editDraft?.autosavedValues) return;
+  state.editDraft.values = { ...state.editDraft.values, ...state.editDraft.autosavedValues };
+  state.editDraft.autosavedValues = null;
+  state.editDraft.dirty = true;
+  persistPublicDraft();
+  rerenderActiveLens();
+}
+
+function discardPublicAutosaveDraft() {
+  if (!state.editDraft) return;
+  clearStoredDraft(state.editDraft.storageKey);
+  state.editDraft.autosavedValues = null;
+  rerenderActiveLens();
+}
+
+function persistPublicDraft() {
+  if (!state.editDraft) return;
+  writeStoredDraft(state.editDraft.storageKey, {
+    lensId: state.editDraft.lensId,
+    values: state.editDraft.values,
+    savedAt: new Date().toISOString()
+  });
+}
+
+function updatePublicDraftStatus() {
+  const status = els.drawerContent.querySelector("[data-draft-status]");
+  if (status) status.hidden = !hasDirtyPublicDraft();
+}
+
+function hasDirtyPublicDraft() {
+  return Boolean(state.editDraft?.dirty);
+}
+
+function clearCurrentPublicDraft() {
+  if (state.editDraft?.storageKey) {
+    clearStoredDraft(state.editDraft.storageKey);
+  }
+  state.editDraft = null;
+}
+
+function getPublicDraftStorageKey(lensId) {
+  return `lenswiki-draft-${slugify(lensId)}`;
+}
+
+function createDraftValues(lens, fields) {
+  return fields.reduce((values, field) => {
+    values[field.key] = field.type === "checkbox"
+      ? Boolean(lens[field.key])
+      : serializeEditValue(lens[field.key], field.type);
+    return values;
+  }, {});
+}
+
+function readStoredDraft(storageKey) {
+  try {
+    const raw = window.localStorage.getItem(storageKey);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" && parsed.values ? parsed : null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function writeStoredDraft(storageKey, payload) {
+  try {
+    window.localStorage.setItem(storageKey, JSON.stringify(payload));
+  } catch (_error) {
+    state.drawerMessage = { tone: "error", text: "Draft backup could not be saved in this browser." };
+  }
+}
+
+function clearStoredDraft(storageKey) {
+  try {
+    window.localStorage.removeItem(storageKey);
+  } catch (_error) {
+    // Ignore storage cleanup failures; the saved Supabase record is still authoritative.
+  }
 }
 
 function replaceLens(updatedLens) {

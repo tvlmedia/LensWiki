@@ -1202,6 +1202,31 @@ button.dense-row:hover {
   background: rgba(232, 92, 117, 0.1);
 }
 
+.edit-dirty-status {
+  margin: 10px 0 0;
+  color: #fff3d6;
+  font-size: 0.86rem;
+}
+
+.draft-restore {
+  margin: 0 52px 16px 0;
+  padding: 12px;
+  border: 1px solid rgba(198, 161, 91, 0.28);
+  border-radius: var(--radius);
+  background: rgba(198, 161, 91, 0.08);
+}
+
+.draft-restore p {
+  margin: 0 0 10px;
+  color: #fff3d6;
+}
+
+.draft-restore div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .confidence {
   color: #f9d4db;
   background: rgba(232, 92, 117, 0.14);

@@ -395,6 +395,30 @@ button:disabled {
   justify-content: flex-end;
 }
 
+.edit-dirty-status {
+  margin: 8px 0 0;
+  color: #fff3d6;
+  font-size: 0.86rem;
+}
+
+.draft-restore {
+  padding: 12px;
+  border: 1px solid rgba(198, 161, 91, 0.28);
+  border-radius: var(--radius);
+  background: rgba(198, 161, 91, 0.08);
+}
+
+.draft-restore p {
+  margin: 0 0 10px;
+  color: #fff3d6;
+}
+
+.draft-restore div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
 .lens-admin-form,
 .form-grid,
 .import-panel {
