@@ -649,43 +649,35 @@ function renderLensDetails(lens) {
       ${lens.importance ? `<span class="importance-pill ${escapeHtml(lens.importance)}">${escapeHtml(lens.importance)}</span>` : ""}
       ${lens.confidence ? `<span class="confidence ${escapeHtml(confidenceClass(lens.confidence))}">${escapeHtml(lens.confidence)}</span>` : ""}
     </div>
-    ${getPublicSummary(lens) ? `<p>${escapeHtml(getPublicSummary(lens))}</p>` : ""}
   `;
   fragment.append(header);
 
   const factFields = [
     ["Year introduced", formatYear(lens)],
     ["Production years", lens.productionYears],
-    ["Designer", lens.designer],
     ["Country", lens.country],
-    ["Factory / location", lens.factoryLocation],
     ["Type", lens.type],
-    ["Timeline category", lens.timelineCategory],
     ["Coverage", lens.coverage],
     ["Mounts", lens.mounts],
     ["Focal lengths", lens.focalLengths],
     ["T-stops / f-stops", lens.tStops],
-    ["Optical formula", lens.opticalFormula],
-    ["Elements / groups", formatElementsGroups(lens)],
-    ["Donor lens", shouldShowDonorLens(lens) ? lens.donorLens : ""],
-    ["Rehousing info", lens.rehousingInfo],
+    ["Timeline category", lens.timelineCategory],
     ["Confidence", lens.confidence]
   ];
 
+  appendIf(fragment, createEditorialSection("Overview", getOverviewSummary(lens)));
+  appendIf(fragment, createEditorialSection("Look", lens.lookSummary));
   appendIf(fragment, createDetailSection("Key specs", createFieldGrid(factFields)));
-  appendIf(fragment, createListSection("Look summary", lens.lookSummary ? [lens.lookSummary] : []));
-  appendIf(fragment, createListSection("Series history", lens.seriesHistory));
   appendIf(fragment, createFocalLengthSpecsSection(lens.focalLengthSpecs));
-  appendIf(fragment, createListSection("Format coverage notes", lens.formatCoverageNotes));
-  appendIf(fragment, createListSection("Characteristics", lens.characteristics));
+  appendIf(fragment, createListSection("Character", lens.characteristics));
   appendIf(fragment, createListSection("Strengths", lens.strengths));
   appendIf(fragment, createListSection("Weaknesses", lens.weaknesses));
-  appendIf(fragment, createListSection("Famous uses", lens.famousUses));
+  appendIf(fragment, createEditorialSection("History", lens.seriesHistory));
+  appendIf(fragment, createRehousingSection(lens));
+  appendIf(fragment, createListSection("Known use", lens.famousUses));
   appendIf(fragment, createYoutubeSection(lens.youtubeEmbeds));
   appendIf(fragment, createRelatedSection(lens));
-  appendIf(fragment, createSourceSection(lens.sources));
-  appendIf(fragment, createListSection("Curation notes", lens.curationNotes ? [lens.curationNotes] : []));
-  appendIf(fragment, createListSection("Notes", lens.notes ? [lens.notes] : []));
+  appendIf(fragment, createSourcesAndNotesSection(lens));
 
   return fragment;
 }
@@ -701,6 +693,20 @@ function createDetailSection(title, content) {
   section.innerHTML = `<h3>${escapeHtml(title)}</h3>`;
   section.append(content);
   return section;
+}
+
+function createEditorialSection(title, content) {
+  if (!hasValue(content)) return null;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "editorial-block";
+  toTextItems(content).forEach((item) => {
+    const paragraph = document.createElement("p");
+    paragraph.textContent = formatListItem(item);
+    wrapper.append(paragraph);
+  });
+
+  return createDetailSection(title, wrapper);
 }
 
 function createFieldGrid(fields) {
@@ -733,6 +739,17 @@ function createListSection(title, items) {
     list.append(li);
   });
   return createDetailSection(title, list);
+}
+
+function createRehousingSection(lens) {
+  if (!shouldShowRehousingInfo(lens) && !shouldShowDonorLens(lens)) return null;
+
+  const fields = [
+    ["Donor lens", shouldShowDonorLens(lens) ? lens.donorLens : ""],
+    ["Rehousing info", shouldShowRehousingInfo(lens) ? lens.rehousingInfo : ""]
+  ];
+
+  return createDetailSection("Rehousing", createFieldGrid(fields));
 }
 
 function createFocalLengthSpecsSection(specs) {
@@ -770,7 +787,7 @@ function createFocalLengthSpecsSection(specs) {
     body.append(row);
   });
 
-  return createDetailSection("Focal length specs", wrapper);
+  return createDetailSection("Focal length data", wrapper);
 }
 
 function formatSpecNotes(spec) {
@@ -797,7 +814,7 @@ function createYoutubeSection(urls) {
     grid.append(iframe);
   });
 
-  return createDetailSection("YouTube sample footage", grid);
+  return createDetailSection("Sample footage", grid);
 }
 
 function createRelatedSection(lens) {
@@ -824,7 +841,33 @@ function createRelatedSection(lens) {
   return createDetailSection("Related lenses", wrapper);
 }
 
-function createSourceSection(sources) {
+function createSourcesAndNotesSection(lens) {
+  const sources = lens.sources;
+  const hasSources = hasValue(sources);
+  const hasNotes = hasValue(lens.curationNotes) || hasValue(lens.notes);
+  if (!hasSources && !hasNotes) return null;
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "sources-notes";
+
+  const sourceLinks = createSourceLinks(sources);
+  if (sourceLinks) wrapper.append(sourceLinks);
+
+  [lens.curationNotes, lens.notes].filter(hasValue).forEach((note) => {
+    const noteBlock = document.createElement("div");
+    noteBlock.className = "editorial-block source-note";
+    toTextItems(note).forEach((item) => {
+      const paragraph = document.createElement("p");
+      paragraph.textContent = formatListItem(item);
+      noteBlock.append(paragraph);
+    });
+    wrapper.append(noteBlock);
+  });
+
+  return createDetailSection("Sources", wrapper);
+}
+
+function createSourceLinks(sources) {
   if (!hasValue(sources)) return null;
   const wrapper = document.createElement("div");
   wrapper.className = "source-list";
@@ -841,7 +884,7 @@ function createSourceSection(sources) {
     wrapper.append(link);
   });
 
-  return wrapper.children.length ? createDetailSection("Sources", wrapper) : null;
+  return wrapper.children.length ? wrapper : null;
 }
 
 function exportJson() {
@@ -973,6 +1016,10 @@ function getPublicSummary(lens) {
   return lens.publicSummary || lens.cardLabel || lens.lookSummary || "";
 }
 
+function getOverviewSummary(lens) {
+  return lens.publicSummary || lens.cardLabel || "";
+}
+
 function getCategory(lens) {
   return lens.timelineCategory || lens.cardLabel || lens.designFamily || lens.type[0] || "";
 }
@@ -989,7 +1036,14 @@ function getCardCoverage(lens) {
 
 function shouldShowDonorLens(lens) {
   if (!hasValue(lens.donorLens)) return false;
+  return hasRehousingEvidence(lens);
+}
 
+function shouldShowRehousingInfo(lens) {
+  return hasValue(lens.rehousingInfo) && hasRehousingEvidence(lens);
+}
+
+function hasRehousingEvidence(lens) {
   const rehousingEvidence = [
     lens.rehousingInfo,
     lens.lineage,
@@ -1054,6 +1108,11 @@ function formatElementsGroups(lens) {
 function hasValue(value) {
   if (Array.isArray(value)) return value.length > 0;
   return value !== null && value !== undefined && value !== "";
+}
+
+function toTextItems(value) {
+  if (Array.isArray(value)) return value.filter(hasValue);
+  return hasValue(value) ? [value] : [];
 }
 
 function asArray(value) {
