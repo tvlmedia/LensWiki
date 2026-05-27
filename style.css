@@ -1360,6 +1360,13 @@ button.dense-row:hover {
   border-color: rgba(198, 161, 91, 0.34);
 }
 
+.confidence.subtle {
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.035);
+  border-color: var(--line);
+  font-weight: 650;
+}
+
 .detail-section {
   margin-top: 24px;
 }
@@ -1399,6 +1406,16 @@ button.dense-row:hover {
   overflow-wrap: anywhere;
 }
 
+.inline-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.detail-field .inline-chip-list {
+  margin-top: 2px;
+}
+
 .editorial-block {
   padding: 16px;
   color: #d8dde6;
@@ -1415,6 +1432,13 @@ button.dense-row:hover {
   margin-top: 12px;
 }
 
+.editorial-block.compact {
+  max-width: 760px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
 .source-note {
   margin-top: 10px;
   color: var(--muted);
@@ -1423,6 +1447,10 @@ button.dense-row:hover {
 .sources-notes {
   display: grid;
   gap: 10px;
+}
+
+.source-list {
+  gap: 6px;
 }
 
 .list-block {
@@ -1438,6 +1466,66 @@ button.dense-row:hover {
   border: 1px solid var(--line);
   border-radius: var(--radius);
   background: rgba(255, 255, 255, 0.035);
+}
+
+.rehousing-block,
+.known-use-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.rehousing-subsection {
+  padding: 14px 0;
+  border-top: 1px solid var(--line);
+}
+
+.rehousing-subsection:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.rehousing-subsection h4,
+.known-use-card h4 {
+  margin: 0;
+  color: #edf1f7;
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+
+.rehousing-subsection h4 {
+  margin-bottom: 9px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.known-use-card {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.known-use-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.known-use-role {
+  margin: 0;
+  color: #d7dce5;
+  line-height: 1.5;
+}
+
+.known-use-notes {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
 }
 
 .spec-table-wrap {
@@ -1486,8 +1574,10 @@ button.dense-row:hover {
   background: rgba(41, 169, 255, 0.1);
   border: 1px solid rgba(41, 169, 255, 0.32);
   border-radius: var(--radius);
-  min-height: 34px;
-  padding: 6px 10px;
+  min-height: 28px;
+  padding: 4px 8px;
+  font-size: 0.82rem;
+  line-height: 1.25;
 }
 
 .correction-panel {

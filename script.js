@@ -11,7 +11,7 @@ const IMPORTANCE_ORDER = {
 };
 
 const KNOWN_IMPORTANCE = ["legendary", "important", "niche", "obscure", "experimental"];
-const KNOWN_CONFIDENCE = ["verified", "medium", "needs verification"];
+const KNOWN_CONFIDENCE = ["verified", "high", "medium-high", "medium", "needs verification"];
 const TYPE_FILTERS = [
   { value: "prime", label: "Prime", terms: ["prime"] },
   { value: "zoom", label: "Zoom", terms: ["zoom"] },
@@ -978,6 +978,8 @@ function createPublicEditDraft(lens) {
 
 function renderLensDetails(lens) {
   const fragment = document.createDocumentFragment();
+  const mountLabels = cleanMountsForDisplay(lens.mounts);
+  const hasFocalLengthSpecs = hasValue(lens.focalLengthSpecs);
   appendIf(fragment, createDrawerMessage());
   const header = document.createElement("header");
   header.className = "drawer-title";
@@ -987,7 +989,7 @@ function renderLensDetails(lens) {
     <div class="drawer-meta">
       <span class="year-pill">${escapeHtml(formatYear(lens))}</span>
       ${lens.importance ? `<span class="importance-pill ${escapeHtml(lens.importance)}">${escapeHtml(lens.importance)}</span>` : ""}
-      ${lens.confidence ? `<span class="confidence ${escapeHtml(confidenceClass(lens.confidence))}">${escapeHtml(lens.confidence)}</span>` : ""}
+      ${shouldShowTitleConfidence(lens.confidence) ? `<span class="confidence subtle ${escapeHtml(confidenceClass(lens.confidence))}">${escapeHtml(lens.confidence)}</span>` : ""}
     </div>
     ${state.admin.isAdmin ? `
       <div class="admin-lens-actions">
@@ -1005,11 +1007,10 @@ function renderLensDetails(lens) {
     ["Country", lens.country],
     ["Type", lens.type],
     ["Coverage", lens.coverage],
-    ["Mounts", lens.mounts],
+    ["Mounts", mountLabels.length ? createChipValue(mountLabels) : ""],
     ["Focal lengths", lens.focalLengths],
-    ["T-stops / f-stops", lens.tStops],
-    ["Timeline category", lens.timelineCategory],
-    ["Confidence", lens.confidence]
+    ...(hasFocalLengthSpecs ? [] : [["T-stops / f-stops", lens.tStops]]),
+    ["Timeline category", lens.timelineCategory]
   ];
 
   appendIf(fragment, createEditorialSection("Overview", getOverviewSummary(lens)));
@@ -1021,7 +1022,7 @@ function renderLensDetails(lens) {
   appendIf(fragment, createListSection("Weaknesses", lens.weaknesses));
   appendIf(fragment, createEditorialSection("History", lens.seriesHistory));
   appendIf(fragment, createRehousingSection(lens));
-  appendIf(fragment, createListSection("Known use", lens.famousUses));
+  appendIf(fragment, createKnownUseSection(lens.famousUses));
   appendIf(fragment, createYoutubeSection(lens.youtubeEmbeds));
   appendIf(fragment, createRelatedSection(lens));
   appendIf(fragment, createSourcesAndNotesSection(lens));
@@ -1491,21 +1492,49 @@ function createFieldGrid(fields) {
   visibleFields.forEach(([label, value]) => {
     const field = document.createElement("div");
     field.className = "detail-field";
-    field.innerHTML = `
-      <dt>${escapeHtml(label)}</dt>
-      <dd>${escapeHtml(formatValue(value))}</dd>
-    `;
+    const term = document.createElement("dt");
+    term.textContent = label;
+    const description = document.createElement("dd");
+    if (isChipValue(value)) {
+      description.append(createInlineChipList(value.items));
+    } else {
+      description.textContent = formatValue(value);
+    }
+    field.append(term, description);
     grid.append(field);
   });
 
   return grid;
 }
 
+function createChipValue(items) {
+  return {
+    renderAs: "chips",
+    items: normalizeArrayField(items).filter(hasValue)
+  };
+}
+
+function isChipValue(value) {
+  return value && typeof value === "object" && value.renderAs === "chips" && hasValue(value.items);
+}
+
+function createInlineChipList(items) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "inline-chip-list";
+  normalizeArrayField(items).forEach((item) => {
+    const chip = document.createElement("span");
+    chip.className = "tag";
+    chip.textContent = item;
+    wrapper.append(chip);
+  });
+  return wrapper;
+}
+
 function createListSection(title, items) {
   if (!hasValue(items)) return null;
   const list = document.createElement("ul");
   list.className = "list-block";
-  items.forEach((item) => {
+  toTextItems(items).forEach((item) => {
     const li = document.createElement("li");
     li.textContent = formatListItem(item);
     list.append(li);
@@ -1516,12 +1545,49 @@ function createListSection(title, items) {
 function createRehousingSection(lens) {
   if (!shouldShowRehousingInfo(lens) && !shouldShowDonorLens(lens)) return null;
 
-  const fields = [
-    ["Donor lens", shouldShowDonorLens(lens) ? lens.donorLens : ""],
-    ["Rehousing info", shouldShowRehousingInfo(lens) ? lens.rehousingInfo : ""]
-  ];
+  const wrapper = document.createElement("div");
+  wrapper.className = "rehousing-block";
 
-  return createDetailSection("Rehousing", createFieldGrid(fields));
+  if (shouldShowDonorLens(lens)) {
+    const donorSection = document.createElement("div");
+    donorSection.className = "rehousing-subsection";
+    donorSection.innerHTML = "<h4>Donor optics</h4>";
+    donorSection.append(createInlineChipList(splitDonorOptics(lens.donorLens)));
+    wrapper.append(donorSection);
+  }
+
+  if (shouldShowRehousingInfo(lens)) {
+    const mechanicalSection = document.createElement("div");
+    mechanicalSection.className = "rehousing-subsection";
+    mechanicalSection.innerHTML = "<h4>Mechanical rehousing</h4>";
+    mechanicalSection.append(createParagraphBlock(lens.rehousingInfo));
+    wrapper.append(mechanicalSection);
+  }
+
+  if (hasValue(lens.rehousingNotes)) {
+    const notesSection = document.createElement("div");
+    notesSection.className = "rehousing-subsection";
+    notesSection.innerHTML = "<h4>Notes</h4>";
+    notesSection.append(createParagraphBlock(lens.rehousingNotes));
+    wrapper.append(notesSection);
+  }
+
+  return createDetailSection("Rehousing", wrapper);
+}
+
+function createParagraphBlock(content) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "editorial-block compact";
+  toTextItems(content).forEach((item) => {
+    const paragraph = document.createElement("p");
+    paragraph.textContent = formatListItem(item);
+    wrapper.append(paragraph);
+  });
+  return wrapper;
+}
+
+function splitDonorOptics(value) {
+  return normalizeArrayField(value).flatMap((item) => safeText(item).split(/\s*,\s*/)).map((item) => item.trim()).filter(Boolean);
 }
 
 function createFocalLengthSpecsSection(specs) {
@@ -1587,6 +1653,66 @@ function createYoutubeSection(urls) {
   });
 
   return createDetailSection("Sample footage", grid);
+}
+
+function createKnownUseSection(items) {
+  if (!hasValue(items)) return null;
+
+  const grid = document.createElement("div");
+  grid.className = "known-use-grid";
+
+  toTextItems(items).forEach((item) => {
+    const card = document.createElement("article");
+    card.className = "known-use-card";
+
+    if (item && typeof item === "object") {
+      const heading = document.createElement("div");
+      heading.className = "known-use-heading";
+
+      const title = document.createElement("h4");
+      title.textContent = safeText(item.title, "Untitled use");
+      heading.append(title);
+
+      if (hasValue(item.year)) {
+        const year = document.createElement("span");
+        year.className = "year-pill";
+        year.textContent = safeText(item.year);
+        heading.append(year);
+      }
+
+      if (shouldShowUseConfidence(item.confidence)) {
+        const confidence = document.createElement("span");
+        confidence.className = `confidence subtle ${confidenceClass(safeText(item.confidence))}`;
+        confidence.textContent = safeText(item.confidence);
+        heading.append(confidence);
+      }
+
+      card.append(heading);
+
+      if (hasValue(item.role)) {
+        const role = document.createElement("p");
+        role.className = "known-use-role";
+        role.textContent = formatValue(item.role);
+        card.append(role);
+      }
+
+      if (hasValue(item.notes)) {
+        const notes = document.createElement("p");
+        notes.className = "known-use-notes";
+        notes.textContent = formatValue(item.notes);
+        card.append(notes);
+      }
+    } else {
+      const paragraph = document.createElement("p");
+      paragraph.className = "known-use-role";
+      paragraph.textContent = formatListItem(item);
+      card.append(paragraph);
+    }
+
+    grid.append(card);
+  });
+
+  return createDetailSection("Known use", grid);
 }
 
 function createRelatedSection(lens) {
@@ -2028,7 +2154,84 @@ function formatYear(lens) {
   return `${lens.yearApproximate ? "c. " : ""}${lens.yearIntroduced}`;
 }
 
+function shouldShowTitleConfidence(confidence) {
+  return safeText(confidence).toLowerCase() === "needs verification";
+}
+
+function shouldShowUseConfidence(confidence) {
+  const normalized = safeText(confidence).toLowerCase();
+  return Boolean(normalized) && !["verified", "high"].includes(normalized);
+}
+
+function cleanMountsForDisplay(value) {
+  const mounts = [];
+  normalizeArrayField(value).forEach((item) => {
+    const text = safeText(item);
+    if (!text || isMountMechanismNote(text)) return;
+    extractMountLabels(text).forEach((label) => {
+      if (label && !mounts.some((existing) => existing.toLowerCase() === label.toLowerCase())) {
+        mounts.push(label);
+      }
+    });
+  });
+  return mounts;
+}
+
+function isMountMechanismNote(value) {
+  return /\b(adapter|custom|depending|mechanic|order|option|system|varies|verify)\b/i.test(value);
+}
+
+function extractMountLabels(value) {
+  const text = safeText(value)
+    .replace(/\bshimmable\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return [];
+
+  const pieces = text.split(/\s*(?:\/|,|\bor\b|\band\b)\s*/i).map((piece) => piece.trim()).filter(Boolean);
+  return pieces.map(normalizeMountLabel).filter(Boolean);
+}
+
+function normalizeMountLabel(value) {
+  const text = safeText(value)
+    .replace(/[-–—]?\s*mounts?$/i, "")
+    .replace(/\bmounts?\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return "";
+
+  const knownMounts = [
+    [/^(arri\s+)?pl$/i, "PL"],
+    [/^lpl$/i, "LPL"],
+    [/^(canon\s+)?ef$/i, "EF"],
+    [/^(sony\s+)?e$/i, "E"],
+    [/^(canon\s+)?rf$/i, "RF"],
+    [/^(leica\s+)?l$/i, "L"],
+    [/^(leica\s+)?m$/i, "Leica M"],
+    [/^(leica\s+)?r$/i, "Leica R"],
+    [/^m42$/i, "M42"],
+    [/^m39$/i, "M39"],
+    [/^(nikon\s+)?f$/i, "Nikon F"],
+    [/^(canon\s+)?fd$/i, "Canon FD"],
+    [/^bncr?$/i, "BNCR"],
+    [/^b(?:\s*mount)?$/i, "B-mount"],
+    [/^c(?:\s*mount)?$/i, "C-mount"],
+    [/^d(?:\s*mount)?$/i, "D-mount"],
+    [/^mft$/i, "MFT"],
+    [/^oct[-\s]?18$/i, "OCT-18"],
+    [/^oct[-\s]?19$/i, "OCT-19"],
+    [/^panavision\s+pv$/i, "Panavision PV"],
+    [/^pv$/i, "Panavision PV"],
+    [/^arri\s+standard$/i, "ARRI Standard"],
+    [/^arri\s+bayonet$/i, "ARRI Bayonet"]
+  ];
+
+  const known = knownMounts.find(([pattern]) => pattern.test(text));
+  return known ? known[1] : text;
+}
+
 function formatValue(value) {
+  if (isChipValue(value)) return value.items.map(formatListItem).join(", ");
   if (Array.isArray(value)) return value.map(formatListItem).join(", ");
   if (value && typeof value === "object") return formatListItem(value);
   if (value === null || value === undefined || value === "") return "";
