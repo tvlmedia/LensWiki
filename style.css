@@ -1587,6 +1587,37 @@ button.dense-row:hover {
   line-height: 1.5;
 }
 
+.donor-years-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: #d9dee8;
+  font-size: 0.88rem;
+}
+
+.donor-years-table th,
+.donor-years-table td {
+  padding: 8px 0;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+}
+
+.donor-years-table th {
+  color: var(--subtle);
+  font-size: 0.72rem;
+  font-weight: 760;
+  letter-spacing: 0.02em;
+}
+
+.donor-years-table td:first-child {
+  color: var(--ink);
+  font-weight: 700;
+  padding-right: 18px;
+}
+
+.donor-years-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .spec-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--line);

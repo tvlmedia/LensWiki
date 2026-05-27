@@ -1812,6 +1812,8 @@ function createRehousingSection(lens) {
     wrapper.append(donorSection);
   }
 
+  appendIf(wrapper, createOriginalOpticsYearsSection(lens));
+
   if (shouldShowRehousingInfo(lens)) {
     const mechanicalSection = document.createElement("div");
     mechanicalSection.className = "rehousing-subsection";
@@ -1830,6 +1832,62 @@ function createRehousingSection(lens) {
   }
 
   return createDetailSection("Rehousing", wrapper);
+}
+
+function createOriginalOpticsYearsSection(lens) {
+  const rows = getOriginalOpticsYearRows(lens);
+  if (!rows.length) return null;
+
+  const section = document.createElement("div");
+  section.className = "rehousing-subsection";
+  section.innerHTML = "<h4>Original optics years</h4>";
+
+  const table = document.createElement("table");
+  table.className = "donor-years-table";
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Lens / donor</th>
+        <th>Original production years</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+
+  const body = table.querySelector("tbody");
+  rows.forEach((item) => {
+    const row = document.createElement("tr");
+    const lensCell = document.createElement("td");
+    const yearsCell = document.createElement("td");
+    lensCell.textContent = item.lens;
+    yearsCell.textContent = item.years;
+    row.append(lensCell, yearsCell);
+    body.append(row);
+  });
+
+  section.append(table);
+  return section;
+}
+
+function getOriginalOpticsYearRows(lens) {
+  const seen = new Set();
+  return normalizeFocalLengthSpecs(lens)
+    .filter((row) => row && typeof row === "object" && !Array.isArray(row))
+    .map((row) => ({
+      lens: safeText(row.lens),
+      years: safeText(row.donorProductionYears)
+    }))
+    .filter((row) => row.lens && row.years)
+    .filter((row) => {
+      const key = `${row.lens}::${row.years}`.toLowerCase();
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+}
+
+function hasOriginalOpticsYears(lens) {
+  return getOriginalOpticsYearRows(lens).length > 0;
 }
 
 function createParagraphBlock(content) {
@@ -2546,10 +2604,11 @@ function shouldShowRehousingSection(lens) {
       || hasValue(lens.donorMount)
       || hasValue(lens.rehousingCompany)
       || hasValue(lens.rehousingGeneration)
-      || hasValue(lens.rehousingNotes);
+      || hasValue(lens.rehousingNotes)
+      || hasOriginalOpticsYears(lens);
   }
   if (lens._isRehousedExplicit) return false;
-  return (hasValue(lens.donorLens) || hasValue(lens.rehousingInfo)) && hasRehousingEvidence(lens);
+  return (hasValue(lens.donorLens) || hasValue(lens.rehousingInfo) || hasOriginalOpticsYears(lens)) && hasRehousingEvidence(lens);
 }
 
 function shouldShowDonorLens(lens) {
