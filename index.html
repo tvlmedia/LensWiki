@@ -8,7 +8,7 @@
       name="description"
       content="A curated archive of cinema lenses, optical history, rehousings, design families, look characteristics and real-world use."
     >
-    <link rel="stylesheet" href="style.css?v=correction-feedback">
+    <link rel="stylesheet" href="style.css?v=curated-filters">
   </head>
   <body>
     <header class="site-hero" id="top">
@@ -111,14 +111,20 @@
                 Manufacturer
                 <select id="manufacturerFilter"></select>
               </label>
-              <label>
-                Type
-                <select id="typeFilter"></select>
-              </label>
-              <label>
-                Format
-                <select id="formatFilter"></select>
-              </label>
+              <div class="filter-control">
+                <span class="filter-label">Type</span>
+                <details class="multi-select" id="typeFilter">
+                  <summary><span>All types</span></summary>
+                  <div class="multi-select-options"></div>
+                </details>
+              </div>
+              <div class="filter-control">
+                <span class="filter-label">Format</span>
+                <details class="multi-select" id="formatFilter">
+                  <summary><span>All formats</span></summary>
+                  <div class="multi-select-options"></div>
+                </details>
+              </div>
               <label>
                 Importance
                 <select id="importanceFilter"></select>
@@ -166,6 +172,6 @@
       </article>
     </aside>
 
-    <script src="script.js?v=correction-feedback" defer></script>
+    <script src="script.js?v=curated-filters" defer></script>
   </body>
 </html>

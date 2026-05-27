@@ -12,7 +12,24 @@ const IMPORTANCE_ORDER = {
 
 const KNOWN_IMPORTANCE = ["legendary", "important", "niche", "obscure", "experimental"];
 const KNOWN_CONFIDENCE = ["verified", "medium", "needs verification"];
-const DEFAULT_TYPES = ["prime", "zoom", "anamorphic", "spherical", "rehoused", "still-lens-derived", "prototype"];
+const TYPE_FILTERS = [
+  { value: "prime", label: "Prime", terms: ["prime"] },
+  { value: "zoom", label: "Zoom", terms: ["zoom"] },
+  { value: "anamorphic", label: "Anamorphic", terms: ["anamorphic"] },
+  { value: "spherical", label: "Spherical", terms: ["spherical"] },
+  { value: "rehoused", label: "Rehoused", terms: ["rehoused", "rehousing", "rehoused cine", "rehoused-cine"] },
+  { value: "vintage", label: "Vintage", terms: ["vintage"] },
+  { value: "modern", label: "Modern", terms: ["modern"] },
+  { value: "still-lens-derived", label: "Still-lens-derived", terms: ["stills-derived", "still-derived", "still lens derived", "still-lens-derived", "stills derived"] },
+  { value: "prototype", label: "Prototype", terms: ["prototype"] },
+  { value: "specialty", label: "Specialty", terms: ["specialty", "special", "character-lens", "character lens"] }
+];
+const FORMAT_FILTERS = [
+  { value: "16mm-super-16", label: "16mm / Super 16", terms: ["16mm", "super 16", "s16"] },
+  { value: "super-35", label: "Super 35", terms: ["super35", "super 35", "s35", "35mm motion-picture", "35mm motion picture"] },
+  { value: "full-frame", label: "Full Frame", terms: ["full frame", "full-frame", "ff", "stills-derived", "still lens derived"] },
+  { value: "65mm-large-format", label: "65mm / Large Format", terms: ["65mm", "large format", "large-format", "lf", "alexa 65", "vistavision"] }
+];
 
 const state = {
   lenses: [],
@@ -20,8 +37,8 @@ const state = {
     search: "",
     era: "all",
     manufacturer: "all",
-    type: "all",
-    format: "all",
+    type: [],
+    format: [],
     importance: "all",
     tag: "all",
     lineage: "all"
@@ -98,14 +115,24 @@ function bindEvents() {
   [
     ["eraFilter", "era"],
     ["manufacturerFilter", "manufacturer"],
-    ["typeFilter", "type"],
-    ["formatFilter", "format"],
     ["importanceFilter", "importance"],
     ["tagFilter", "tag"],
     ["lineageFilter", "lineage"]
   ].forEach(([elementId, filterKey]) => {
     els[elementId].addEventListener("change", (event) => {
       state.filters[filterKey] = event.target.value;
+      renderArchive();
+    });
+  });
+
+  [
+    ["typeFilter", "type"],
+    ["formatFilter", "format"]
+  ].forEach(([elementId, filterKey]) => {
+    els[elementId].addEventListener("change", (event) => {
+      if (!event.target.matches('input[type="checkbox"]')) return;
+      state.filters[filterKey] = getCheckedValues(els[elementId]);
+      updateMultiSelectSummary(els[elementId], filterKey);
       renderArchive();
     });
   });
@@ -362,8 +389,8 @@ function renderAll() {
 function renderFilterOptions() {
   populateSelect(els.eraFilter, "All eras", getEraOptions(state.lenses));
   populateSelect(els.manufacturerFilter, "All makers", uniqueValues(state.lenses.map((lens) => lens.manufacturer)));
-  populateSelect(els.typeFilter, "All types", uniqueValues([...DEFAULT_TYPES, ...state.lenses.flatMap((lens) => lens.type)]));
-  populateSelect(els.formatFilter, "All formats", uniqueValues(state.lenses.map((lens) => lens.coverage)));
+  populateMultiSelect(els.typeFilter, "All types", TYPE_FILTERS, state.filters.type);
+  populateMultiSelect(els.formatFilter, "All formats", FORMAT_FILTERS, state.filters.format);
   populateSelect(els.importanceFilter, "All importance", uniqueValues([...KNOWN_IMPORTANCE, ...state.lenses.map((lens) => lens.importance)]));
   populateSelect(els.tagFilter, "All look tags", uniqueValues(state.lenses.flatMap((lens) => lens.characteristics)));
   populateSelect(els.lineageFilter, "All lineage", uniqueValues(state.lenses.map((lens) => lens.lineage)));
@@ -485,7 +512,7 @@ function setEraFilter(era) {
 
 function clearFilters() {
   Object.keys(state.filters).forEach((key) => {
-    state.filters[key] = key === "search" ? "" : "all";
+    state.filters[key] = ["type", "format"].includes(key) ? [] : key === "search" ? "" : "all";
   });
 
   els.searchInput.value = "";
@@ -493,14 +520,14 @@ function clearFilters() {
   [
     els.eraFilter,
     els.manufacturerFilter,
-    els.typeFilter,
-    els.formatFilter,
     els.importanceFilter,
     els.tagFilter,
     els.lineageFilter
   ].forEach((select) => {
     select.value = "all";
   });
+  resetMultiSelect(els.typeFilter, "type");
+  resetMultiSelect(els.formatFilter, "format");
   renderArchive();
 }
 
@@ -997,14 +1024,89 @@ function getFilteredLenses() {
     const matchesSearch = !state.filters.search || haystack.includes(state.filters.search);
     const matchesEra = state.filters.era === "all" || era === state.filters.era;
     const matchesManufacturer = state.filters.manufacturer === "all" || lens.manufacturer === state.filters.manufacturer;
-    const matchesType = state.filters.type === "all" || lens.type.includes(state.filters.type);
-    const matchesFormat = state.filters.format === "all" || lens.coverage === state.filters.format;
+    const matchesType = matchesCuratedFilter(buildTypeFilterText(lens), state.filters.type, TYPE_FILTERS);
+    const matchesFormat = matchesCuratedFilter(buildFormatFilterText(lens), state.filters.format, FORMAT_FILTERS);
     const matchesImportance = state.filters.importance === "all" || lens.importance === state.filters.importance;
     const matchesTag = state.filters.tag === "all" || lens.characteristics.includes(state.filters.tag);
     const matchesLineage = state.filters.lineage === "all" || lens.lineage === state.filters.lineage;
 
     return matchesSearch && matchesEra && matchesManufacturer && matchesType && matchesFormat && matchesImportance && matchesTag && matchesLineage;
   });
+}
+
+function matchesCuratedFilter(text, selectedValues, options) {
+  if (!selectedValues.length) return true;
+  const haystack = normalizeMatchText(text);
+
+  return selectedValues.some((value) => {
+    const option = options.find((item) => item.value === value);
+    if (!option) return false;
+    return option.terms.some((term) => matchTerm(haystack, term));
+  });
+}
+
+function normalizeMatchText(value) {
+  const spaced = safeText(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return {
+    spaced: ` ${spaced} `,
+    compact: spaced.replace(/\s+/g, "")
+  };
+}
+
+function matchTerm(haystack, term) {
+  const normalized = normalizeMatchText(term);
+  const token = normalized.spaced.trim();
+  if (!token) return false;
+  if (token === "full frame") {
+    return hasPositivePhrase(haystack.spaced, token);
+  }
+  if (token.length <= 2) {
+    return haystack.spaced.includes(` ${token} `);
+  }
+  return haystack.spaced.includes(` ${token} `) || haystack.compact.includes(normalized.compact);
+}
+
+function hasPositivePhrase(spacedText, phrase) {
+  const words = spacedText.trim().split(/\s+/);
+  const phraseWords = phrase.split(/\s+/);
+  for (let index = 0; index <= words.length - phraseWords.length; index += 1) {
+    const candidate = words.slice(index, index + phraseWords.length).join(" ");
+    if (candidate !== phrase) continue;
+    const previousWords = words.slice(Math.max(0, index - 3), index);
+    if (previousWords.some((word) => ["not", "no", "non"].includes(word))) continue;
+    return true;
+  }
+  return false;
+}
+
+function buildTypeFilterText(lens) {
+  return [
+    lens.type,
+    lens.characteristics,
+    lens.timelineCategory,
+    lens.cardLabel,
+    lens.publicSummary,
+    lens.lookSummary
+  ].flat().filter(Boolean).join(" ");
+}
+
+function buildFormatFilterText(lens) {
+  return [
+    lens.coverage,
+    lens.formatCoverageNotes,
+    lens.type,
+    lens.characteristics,
+    lens.timelineCategory,
+    lens.cardLabel,
+    lens.publicSummary,
+    lens.lookSummary
+  ].flat().filter(Boolean).join(" ");
 }
 
 function buildSearchText(lens) {
@@ -1089,6 +1191,45 @@ function populateSelect(select, allLabel, values) {
     select.append(option);
   });
   select.value = values.includes(current) ? current : "all";
+}
+
+function populateMultiSelect(container, allLabel, options, selectedValues) {
+  const selected = new Set(selectedValues);
+  const optionWrap = container.querySelector(".multi-select-options");
+  optionWrap.innerHTML = "";
+
+  options.forEach((option) => {
+    const label = document.createElement("label");
+    label.className = "multi-option";
+    label.innerHTML = `
+      <input type="checkbox" value="${escapeHtml(option.value)}">
+      <span>${escapeHtml(option.label)}</span>
+    `;
+    label.querySelector("input").checked = selected.has(option.value);
+    optionWrap.append(label);
+  });
+
+  container.dataset.allLabel = allLabel;
+  updateMultiSelectSummary(container);
+}
+
+function getCheckedValues(container) {
+  return Array.from(container.querySelectorAll('input[type="checkbox"]:checked')).map((input) => input.value);
+}
+
+function updateMultiSelectSummary(container) {
+  const selectedLabels = Array.from(container.querySelectorAll('input[type="checkbox"]:checked'))
+    .map((input) => input.closest("label").querySelector("span").textContent);
+  container.querySelector("summary span").textContent = selectedLabels.length ? selectedLabels.join(", ") : container.dataset.allLabel;
+}
+
+function resetMultiSelect(container, filterKey) {
+  container.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    input.checked = false;
+  });
+  state.filters[filterKey] = [];
+  updateMultiSelectSummary(container);
+  container.open = false;
 }
 
 function getPublicSummary(lens) {
