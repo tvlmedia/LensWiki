@@ -1208,7 +1208,7 @@ async function saveLensToSupabase(lens) {
       .maybeSingle()
   );
   const status = safeText(lens.status) || safeText(existing.data?.status) || "ready";
-  const storedLens = { ...lens, status };
+  const storedLens = cleanLensArrayFields({ ...lens, status });
 
   return safeSupabaseCall(() =>
     state.admin.client
@@ -1940,7 +1940,7 @@ function parseEditValue(value, type, key) {
     return numberOrNull(value);
   }
   if (NORMALIZED_ARRAY_FIELDS.has(key)) {
-    return normalizeArrayField(value);
+    return normalizeArrayField(value, { fieldName: key });
   }
   if (type === "list") {
     return splitCommaList(value);
@@ -1977,15 +1977,24 @@ function splitLines(value) {
 
 function normalizeArrayField(value, options = {}) {
   if (Array.isArray(value)) {
-    return value.map(cleanArrayItem).filter(Boolean);
+    const rawItems = value.map((item) => (item && typeof item === "object" ? formatListItem(item) : safeText(item)));
+    if (rawItems.some(hasJsonArraySyntaxArtifact)) {
+      return normalizeArrayField(rawItems.join(", "), options);
+    }
+    return rawItems.map(cleanArrayItem).filter((item) => item && !isJsonSyntaxOnly(item));
   }
 
   const text = safeText(value);
   if (!text) return [];
 
-  const trimmed = stripWrappingQuotes(text)
+  const trimmed = stripJsonPropertyPrefix(stripWrappingQuotes(text)
     .replace(/,\s*\]$/g, "]")
-    .trim();
+    .trim());
+
+  const parsedObjectArray = parseObjectArraySnippet(trimmed, options.fieldName);
+  if (parsedObjectArray) {
+    return normalizeArrayField(parsedObjectArray, options);
+  }
 
   if (trimmed.startsWith("[")) {
     try {
@@ -2012,13 +2021,57 @@ function normalizeArrayField(value, options = {}) {
 
 function cleanArrayItem(value) {
   if (value && typeof value === "object") return formatListItem(value);
-  return stripWrappingQuotes(safeText(value)
+  const cleaned = stripWrappingQuotes(stripJsonPropertyPrefix(safeText(value)
     .replace(/^\[+/, "")
     .replace(/\]+$/, "")
     .replace(/^\\?["']+/, "")
     .replace(/\\?["']+$/, "")
     .replace(/,\s*$/g, "")
-    .trim());
+    .trim()));
+  return isJsonSyntaxOnly(cleaned) ? "" : cleaned;
+}
+
+function cleanLensArrayFields(lens) {
+  const cleaned = { ...lens };
+  NORMALIZED_ARRAY_FIELDS.forEach((fieldName) => {
+    if (hasValue(cleaned[fieldName])) {
+      cleaned[fieldName] = normalizeArrayField(cleaned[fieldName], { fieldName });
+    }
+  });
+  return cleaned;
+}
+
+function stripJsonPropertyPrefix(value) {
+  return safeText(value).replace(/^\s*["']?[A-Za-z][A-Za-z0-9_-]*["']?\s*:\s*/u, "").trim();
+}
+
+function parseObjectArraySnippet(value, preferredFieldName = "") {
+  const text = safeText(value);
+  if (!text.startsWith("{")) return null;
+  try {
+    const parsed = JSON.parse(text);
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    if (preferredFieldName && Array.isArray(parsed[preferredFieldName])) return parsed[preferredFieldName];
+    const firstArray = Object.values(parsed).find(Array.isArray);
+    return firstArray || null;
+  } catch (_error) {
+    return null;
+  }
+}
+
+function hasJsonArraySyntaxArtifact(value) {
+  const text = safeText(value);
+  return /^["']?[A-Za-z][A-Za-z0-9_-]*["']?\s*:/u.test(text)
+    || text === "["
+    || text === "]"
+    || isJsonSyntaxOnly(text)
+    || /^\[/.test(text)
+    || /\]$/.test(text);
+}
+
+function isJsonSyntaxOnly(value) {
+  const text = stripWrappingQuotes(value);
+  return Boolean(text) && /^[\[\]\{\}",:'\s,]+$/.test(text);
 }
 
 function stripWrappingQuotes(value) {
