@@ -1217,6 +1217,12 @@ button.dense-row:hover {
   flex-wrap: wrap;
 }
 
+.admin-source-status {
+  margin: 8px 0 0;
+  color: var(--subtle);
+  font-size: 0.82rem;
+}
+
 .copy-status {
   color: #d9fff0;
   font-size: 0.84rem;

@@ -146,7 +146,8 @@ const state = {
     discoveredJsonFiles: 0,
     loadedFiles: 0,
     failedFiles: 0,
-    importedRecords: 0
+    importedRecords: 0,
+    source: "json"
   }
 };
 
@@ -407,8 +408,25 @@ async function loadLensLibrary() {
     discoveredJsonFiles: 0,
     loadedFiles: 0,
     failedFiles: 0,
-    importedRecords: 0
+    importedRecords: 0,
+    source: "json"
   };
+
+  const supabaseLenses = await loadSupabaseLensRecords();
+  const supabaseById = new Map();
+  supabaseLenses.forEach((lens) => {
+    const fileName = safeText(lens.fileName) || `${safeText(lens.id, "lenswiki-record")}.json`;
+    if (!isValidLens(lens, fileName)) return;
+    supabaseById.set(lens.id, normalizeLens({ ...lens, _recordSource: "supabase" }, fileName));
+  });
+
+  if (supabaseById.size) {
+    const lenses = Array.from(supabaseById.values()).sort(sortByYearThenImportance);
+    status.loadedFiles = supabaseById.size;
+    status.importedRecords = lenses.length;
+    status.source = "supabase";
+    return { lenses, status, error: "" };
+  }
 
   let entries = [];
   let githubError = "";
@@ -453,7 +471,7 @@ async function loadLensLibrary() {
       result.lenses.forEach((lens) => {
         if (!isValidLens(lens, result.fileName)) return;
         warnIfIdDoesNotMatchFile(lens.id, result.fileName);
-        const normalized = normalizeLens(lens, result.fileName);
+        const normalized = normalizeLens({ ...lens, _recordSource: "json" }, result.fileName);
         if (lensesById.has(normalized.id)) {
           console.warn(`LensWiki: duplicate lens id "${normalized.id}" in ${result.fileName}. Keeping the first record.`);
           return;
@@ -462,13 +480,6 @@ async function loadLensLibrary() {
       });
     });
   }
-
-  const supabaseLenses = await loadSupabaseLensRecords();
-  supabaseLenses.forEach((lens) => {
-    const fileName = safeText(lens.fileName) || `${safeText(lens.id, "lenswiki-record")}.json`;
-    if (!isValidLens(lens, fileName)) return;
-    lensesById.set(lens.id, normalizeLens(lens, fileName));
-  });
 
   const lenses = Array.from(lensesById.values());
   lenses.sort(sortByYearThenImportance);
@@ -484,6 +495,7 @@ async function loadSupabaseLensRecords() {
     client
       .from("lenswiki_records")
       .select("id,slug,name,manufacturer,year_introduced,status,confidence,data,updated_at")
+      .in("status", ["ready", "published"])
       .order("year_introduced", { ascending: true })
   );
 
@@ -514,7 +526,9 @@ function lensFromSupabaseRecord(record) {
     manufacturer: safeText(data.manufacturer) || safeText(record.manufacturer),
     yearIntroduced,
     status: safeText(data.status) || safeText(record.status),
-    confidence: safeText(data.confidence) || safeText(record.confidence)
+    confidence: safeText(data.confidence) || safeText(record.confidence),
+    _recordSource: "supabase",
+    _supabaseUpdatedAt: safeText(record.updated_at)
   };
 }
 
@@ -608,6 +622,7 @@ function normalizeLens(lens, fileName) {
     || "";
 
   return {
+    ...lens,
     id: safeText(lens.id),
     slug: safeText(lens.slug) || slugify(lens.id),
     fileName: safeText(lens.fileName) || fileName,
@@ -665,6 +680,8 @@ function normalizeLens(lens, fileName) {
     libraryStatus: safeText(lens.libraryStatus),
     curationNotes: safeText(lens.curationNotes),
     notes: safeText(lens.notes),
+    _recordSource: safeText(lens._recordSource) || "json",
+    _supabaseUpdatedAt: safeText(lens._supabaseUpdatedAt),
     sourceFile: fileName,
     searchText: JSON.stringify(lens).toLowerCase()
   };
@@ -1123,6 +1140,7 @@ function renderLensDetails(lens) {
         <button class="ghost-button small" type="button" data-drawer-action="copy-json">Copy JSON</button>
         <span class="copy-status" data-copy-status hidden></span>
       </div>
+      <p class="admin-source-status">${escapeHtml(getAdminLensSourceText(lens))}</p>
     ` : ""}
   `;
   fragment.append(header);
@@ -1178,6 +1196,7 @@ function renderLensEditForm(lens) {
         <button class="ghost-button small" type="button" data-drawer-action="cancel-edit">Cancel</button>
         <span class="copy-status" data-copy-status hidden></span>
       </div>
+      <p class="admin-source-status">${escapeHtml(getAdminLensSourceText(lens))}</p>
       <p class="edit-dirty-status" data-draft-status ${draft.dirty ? "" : "hidden"}>Unsaved changes</p>
     </header>
     ${state.drawerMessage ? `
@@ -1198,6 +1217,13 @@ function renderLensEditForm(lens) {
     </div>
   `;
   return form;
+}
+
+function getAdminLensSourceText(lens) {
+  if (lens._recordSource === "supabase") {
+    return "Source: Supabase";
+  }
+  return "Source: JSON fallback · Not yet saved to Supabase";
 }
 
 function renderJsonPatchPanel(patchState) {
@@ -1384,13 +1410,13 @@ async function saveLensEdits(form) {
     return;
   }
 
-  const normalized = normalizeLens(updatedLens, updatedLens.fileName || lens.fileName || lens.sourceFile);
+  const normalized = normalizeLens({ ...updatedLens, _recordSource: "supabase" }, updatedLens.fileName || lens.fileName || lens.sourceFile);
   replaceLens(normalized);
   state.activeLensId = normalized.id;
   state.editingLensId = "";
   clearStoredDraft(state.editDraft.storageKey);
   state.editDraft = null;
-  state.drawerMessage = { tone: "success", text: "Lens updated." };
+  state.drawerMessage = { tone: "success", text: "Saved to Supabase. This update is now live for public users." };
   renderAll();
   rerenderActiveLens();
 }
@@ -1471,6 +1497,12 @@ function removeManualCopyFallback(root) {
 }
 
 async function saveLensToSupabase(lens) {
+  const userResult = await safeSupabaseCall(() => state.admin.client.auth.getUser());
+  const userId = userResult.data?.user?.id;
+  if (userResult.error || !userId) {
+    return { data: null, error: userResult.error || new Error("Admin session unavailable") };
+  }
+
   const existing = await safeSupabaseCall(() =>
     state.admin.client
       .from("lenswiki_records")
@@ -1479,7 +1511,7 @@ async function saveLensToSupabase(lens) {
       .maybeSingle()
   );
   const status = safeText(lens.status) || safeText(existing.data?.status) || "ready";
-  const storedLens = cleanLensArrayFields({ ...lens, status });
+  const storedLens = cleanLensArrayFields(toExportLens({ ...lens, status }));
 
   return safeSupabaseCall(() =>
     state.admin.client
@@ -1489,11 +1521,12 @@ async function saveLensToSupabase(lens) {
         slug: storedLens.slug || slugify(storedLens.id),
         name: storedLens.name,
         manufacturer: storedLens.manufacturer || null,
-        year_introduced: storedLens.yearIntroduced ? String(storedLens.yearIntroduced) : null,
+        year_introduced: hasValue(storedLens.yearIntroduced) ? String(storedLens.yearIntroduced) : safeText(storedLens.year_introduced) || null,
         status,
         confidence: storedLens.confidence || null,
         data: storedLens,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        updated_by: userId
       }, { onConflict: "id" })
       .select("id")
       .single()
@@ -2188,7 +2221,15 @@ function exportJson() {
 }
 
 function toExportLens(lens) {
-  const { searchText, _isRehousedExplicit, ...exportable } = lens;
+  const {
+    searchText,
+    sourceFile,
+    videoSamples,
+    _isRehousedExplicit,
+    _recordSource,
+    _supabaseUpdatedAt,
+    ...exportable
+  } = lens;
   return exportable;
 }
 
