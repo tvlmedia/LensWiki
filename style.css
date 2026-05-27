@@ -536,6 +536,12 @@ select {
   gap: 8px;
 }
 
+.admin-archive-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .timeline-scale {
   display: grid;
   grid-template-columns: repeat(3, minmax(82px, 1fr));
@@ -1791,6 +1797,7 @@ button.dense-row:hover {
 }
 
 .edit-field input,
+.edit-field select,
 .edit-field textarea {
   color: var(--ink);
   background: #090b0f;
@@ -1798,7 +1805,8 @@ button.dense-row:hover {
   border-radius: var(--radius);
 }
 
-.edit-field input {
+.edit-field input,
+.edit-field select {
   height: 40px;
   padding: 0 12px;
 }
@@ -1809,9 +1817,30 @@ button.dense-row:hover {
 }
 
 .edit-field input:focus,
+.edit-field select:focus,
 .edit-field textarea:focus {
   border-color: rgba(47, 156, 255, 0.42);
   box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.new-lens-modes {
+  clear: both;
+  margin: 0 52px 14px 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.new-lens-source-panel {
+  margin-bottom: 14px;
+}
+
+.new-lens-validation {
+  margin: 0 52px 14px 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.035);
 }
 
 .edit-field small {

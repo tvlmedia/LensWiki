@@ -123,6 +123,25 @@ const ADMIN_EDIT_FIELDS = [
   { key: "curationNotes", label: "Confidence notes", type: "textarea" },
   { key: "focalLengthSpecs", label: "Focal length specs", type: "structured" }
 ];
+const NEW_LENS_FIELDS = [
+  { key: "id", label: "Record ID", type: "text" },
+  { key: "slug", label: "Slug", type: "text" },
+  { key: "name", label: "Lens name", type: "text" },
+  { key: "manufacturer", label: "Manufacturer / maker", type: "text" },
+  { key: "yearIntroduced", label: "Year introduced", type: "number" },
+  { key: "yearApproximate", label: "Approximate year", type: "checkbox" },
+  { key: "status", label: "Status", type: "select", options: ["draft", "ready", "published"] },
+  { key: "confidence", label: "Confidence", type: "text" },
+  { key: "type", label: "Type tags", type: "list" },
+  { key: "coverage", label: "Coverage", type: "text" },
+  { key: "mounts", label: "Mounts", type: "list" },
+  { key: "focalLengths", label: "Focal lengths", type: "list" },
+  { key: "tStops", label: "T-stops", type: "list" },
+  { key: "publicSummary", label: "Public summary", type: "textarea" },
+  { key: "lookSummary", label: "Look summary", type: "textarea" },
+  { key: "sources", label: "Sources", type: "structured" },
+  { key: "notes", label: "Notes", type: "textarea" }
+];
 
 const state = {
   lenses: [],
@@ -143,6 +162,7 @@ const state = {
   activeLensId: "",
   editingLensId: "",
   editDraft: null,
+  newLensDraft: null,
   drawerMessage: null,
   admin: {
     client: null,
@@ -200,6 +220,7 @@ function cacheEls() {
     "lineageFilter",
     "clearFilters",
     "unitToggle",
+    "adminArchiveActions",
     "quickChips",
     "scaleToggle",
     "eraStrip",
@@ -290,6 +311,15 @@ function bindEvents() {
     els.exportJson.addEventListener("click", exportJson);
   }
 
+  if (els.adminArchiveActions) {
+    els.adminArchiveActions.addEventListener("click", (event) => {
+      const action = event.target.closest("[data-admin-action]");
+      if (action?.dataset.adminAction === "add-new-lens") {
+        openNewLensEditor();
+      }
+    });
+  }
+
   els.detailDrawer.addEventListener("click", (event) => {
     if (event.target.closest("[data-close-drawer]")) {
       closeDrawer();
@@ -298,6 +328,7 @@ function bindEvents() {
 
   els.drawerContent.addEventListener("click", handleDrawerAction);
   els.drawerContent.addEventListener("input", handleDrawerInput);
+  els.drawerContent.addEventListener("change", handleDrawerChange);
   els.drawerContent.addEventListener("submit", handleDrawerSubmit);
 
   document.addEventListener("keydown", (event) => {
@@ -362,6 +393,7 @@ async function initAdminSession() {
     }
 
     state.admin.isAdmin = false;
+    renderAdminArchiveActions();
     rerenderActiveLens();
   });
 }
@@ -392,6 +424,7 @@ async function verifyLensWikiAdmin(user) {
 
   state.admin.isAdmin = !error && Boolean(data?.user_id);
   state.admin.checking = false;
+  renderAdminArchiveActions();
   rerenderActiveLens();
   return state.admin.isAdmin;
 }
@@ -741,6 +774,7 @@ function renderLibraryStatus() {
 
 function renderArchive() {
   const lenses = getFilteredLenses();
+  renderAdminArchiveActions();
   renderDataStatus();
   renderModeButtons();
   renderQuickChips();
@@ -775,6 +809,19 @@ function renderArchive() {
   } else {
     renderCardTimeline(lenses);
   }
+}
+
+function renderAdminArchiveActions() {
+  if (!els.adminArchiveActions) return;
+  els.adminArchiveActions.hidden = !state.admin.isAdmin;
+  if (!state.admin.isAdmin) {
+    els.adminArchiveActions.innerHTML = "";
+    return;
+  }
+
+  els.adminArchiveActions.innerHTML = `
+    <button class="secondary-button small" type="button" data-admin-action="add-new-lens">Add New Lens</button>
+  `;
 }
 
 function renderDataStatus() {
@@ -1015,10 +1062,15 @@ function closeDrawer() {
   state.activeLensId = "";
   state.editingLensId = "";
   state.editDraft = null;
+  state.newLensDraft = null;
   state.drawerMessage = null;
 }
 
 function rerenderActiveLens() {
+  if (state.newLensDraft?.open && els.detailDrawer.getAttribute("aria-hidden") !== "true") {
+    els.drawerContent.replaceChildren(renderNewLensEditor());
+    return;
+  }
   if (!state.activeLensId || els.detailDrawer.getAttribute("aria-hidden") === "true") return;
   const lens = state.lenses.find((item) => item.id === state.activeLensId);
   if (!lens) return;
@@ -1035,6 +1087,30 @@ function handleDrawerAction(event) {
     const lens = getActiveLens();
     if (!lens || !state.admin.isAdmin) return;
     startLensEdit(lens);
+  }
+
+  if (action.dataset.drawerAction === "add-new-lens") {
+    openNewLensEditor();
+  }
+
+  if (action.dataset.drawerAction === "new-lens-mode") {
+    setNewLensMode(action.dataset.mode);
+  }
+
+  if (action.dataset.drawerAction === "parse-new-lens-json") {
+    parseNewLensJsonInput();
+  }
+
+  if (action.dataset.drawerAction === "copy-new-lens-json") {
+    copyNewLensJson(action).catch(() => {
+      showInlineCopyStatus(els.drawerContent, "Clipboard blocked. Copy manually.", "error");
+    });
+  }
+
+  if (action.dataset.drawerAction === "cancel-new-lens") {
+    if (hasDirtyPublicDraft() && !confirm("Discard unsaved changes?")) return;
+    clearCurrentPublicDraft();
+    closeDrawer();
   }
 
   if (action.dataset.drawerAction === "copy-json") {
@@ -1078,6 +1154,11 @@ function handleDrawerAction(event) {
 }
 
 function handleDrawerInput(event) {
+  if (state.newLensDraft?.open) {
+    handleNewLensInput(event);
+    return;
+  }
+
   if (event.target.matches("[data-json-patch-input]")) {
     if (state.editDraft?.jsonPatch) {
       state.editDraft.jsonPatch.raw = event.target.value;
@@ -1111,13 +1192,426 @@ function handleDrawerInput(event) {
   }
 }
 
+function handleDrawerChange(event) {
+  if (!state.newLensDraft?.open) return;
+  if (event.target.matches("[data-new-lens-file]")) {
+    loadNewLensJsonFile(event.target.files?.[0]);
+  }
+}
+
 function handleDrawerSubmit(event) {
+  if (event.target.matches("#newLensForm")) {
+    event.preventDefault();
+    saveNewLens(event.target).catch(() => {
+      setNewLensMessage("error", "Could not save new lens. Please try again.");
+      rerenderActiveLens();
+    });
+    return;
+  }
+
   if (!event.target.matches("#lensEditForm")) return;
   event.preventDefault();
   saveLensEdits(event.target).catch(() => {
     state.drawerMessage = { tone: "error", text: "Could not save lens. Please try again." };
     rerenderActiveLens();
   });
+}
+
+function openNewLensEditor() {
+  if (!state.admin.isAdmin) return;
+  if (hasDirtyPublicDraft() && !confirm("Discard unsaved changes?")) return;
+  if (hasDirtyPublicDraft()) clearCurrentPublicDraft();
+  state.activeLensId = "";
+  state.editingLensId = "";
+  state.editDraft = null;
+  state.drawerMessage = null;
+  state.newLensDraft = createNewLensDraft();
+  els.drawerContent.replaceChildren(renderNewLensEditor());
+  els.detailDrawer.classList.add("is-open");
+  els.detailDrawer.setAttribute("aria-hidden", "false");
+  document.body.classList.add("drawer-open");
+}
+
+function createNewLensDraft() {
+  const lens = {
+    status: "ready",
+    confidence: "needs verification",
+    type: [],
+    mounts: [],
+    focalLengths: [],
+    tStops: [],
+    sources: []
+  };
+  return {
+    open: true,
+    mode: "manual",
+    lens,
+    values: createDraftValues(lens, NEW_LENS_FIELDS),
+    rawJson: "",
+    uploadFileName: "",
+    message: null,
+    validation: validateNewLens(lens),
+    dirty: false,
+    autoId: true,
+    autoSlug: true
+  };
+}
+
+function renderNewLensEditor() {
+  const draft = state.newLensDraft || createNewLensDraft();
+  const validation = validateNewLens(buildNewLensFromDraft(draft, { applySuggestions: false }));
+  draft.validation = validation;
+  const form = document.createElement("form");
+  form.className = "lens-edit-form new-lens-form";
+  form.id = "newLensForm";
+  form.innerHTML = `
+    <header class="drawer-title edit-title">
+      <p class="eyebrow">Admin</p>
+      <h2 id="drawerTitle">Add New Lens</h2>
+      <p>Create a Supabase lens record without editing JSON files manually.</p>
+      <div class="admin-lens-actions">
+        <button class="primary-button small" type="submit">Save &amp; publish</button>
+        <button class="secondary-button small" type="button" data-drawer-action="copy-new-lens-json">Copy JSON</button>
+        <button class="ghost-button small" type="button" data-drawer-action="cancel-new-lens">Cancel</button>
+        <span class="copy-status" data-copy-status hidden></span>
+      </div>
+      ${draft.dirty ? '<p class="edit-dirty-status">Unsaved changes</p>' : ""}
+    </header>
+    ${draft.message ? `<p class="drawer-message ${escapeHtml(draft.message.tone || "")}">${escapeHtml(draft.message.text)}</p>` : ""}
+    ${renderNewLensModeTabs(draft)}
+    ${renderNewLensModePanel(draft)}
+    ${renderNewLensValidation(validation)}
+    <div class="edit-grid">
+      ${NEW_LENS_FIELDS.map((field) => renderNewLensField(draft, field)).join("")}
+    </div>
+  `;
+  return form;
+}
+
+function renderNewLensModeTabs(draft) {
+  const modes = [
+    ["manual", "Manual entry"],
+    ["paste", "Paste JSON"],
+    ["upload", "Upload JSON file"]
+  ];
+  return `
+    <div class="new-lens-modes" role="tablist" aria-label="New lens entry mode">
+      ${modes.map(([mode, label]) => `
+        <button
+          class="scale-button ${draft.mode === mode ? "is-active" : ""}"
+          type="button"
+          data-drawer-action="new-lens-mode"
+          data-mode="${escapeHtml(mode)}"
+          aria-pressed="${draft.mode === mode ? "true" : "false"}"
+        >${escapeHtml(label)}</button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderNewLensModePanel(draft) {
+  if (draft.mode === "paste") {
+    return `
+      <section class="json-patch-panel new-lens-source-panel">
+        <div class="json-patch-heading">
+          <div>
+            <p class="eyebrow">Paste JSON</p>
+            <h3>Load a full lens JSON object</h3>
+          </div>
+          <button class="secondary-button small" type="button" data-drawer-action="parse-new-lens-json">Load JSON</button>
+        </div>
+        <p class="json-patch-note">Nested fields are preserved exactly, including focalLengthSpecs, sampleFootage, cineflares and unknown fields.</p>
+        <textarea data-new-lens-json rows="10" placeholder='{ "name": "Lens name", "manufacturer": "Maker", "yearIntroduced": 2026 }'>${escapeHtml(draft.rawJson || "")}</textarea>
+      </section>
+    `;
+  }
+
+  if (draft.mode === "upload") {
+    return `
+      <section class="json-patch-panel new-lens-source-panel">
+        <div class="json-patch-heading">
+          <div>
+            <p class="eyebrow">Upload JSON</p>
+            <h3>Load a local .json file</h3>
+          </div>
+        </div>
+        <p class="json-patch-note">The file is read in this browser only. It is saved publicly only after Save & publish.</p>
+        <label class="edit-field edit-field-wide">
+          <span>JSON file</span>
+          <input data-new-lens-file type="file" accept=".json,application/json">
+        </label>
+        ${draft.uploadFileName ? `<p class="json-patch-note">Loaded: ${escapeHtml(draft.uploadFileName)}</p>` : ""}
+      </section>
+    `;
+  }
+
+  return `
+    <section class="json-patch-panel new-lens-source-panel">
+      <p class="json-patch-note">Fill the core fields below. ID and slug are suggested from year, maker and lens name, and can be edited before saving.</p>
+    </section>
+  `;
+}
+
+function renderNewLensValidation(validation) {
+  if (!validation.errors.length && !validation.warnings.length) {
+    return '<p class="drawer-message">Ready to save.</p>';
+  }
+
+  const errors = validation.errors.length
+    ? `<p class="json-patch-error">${escapeHtml(validation.errors.join(" "))}</p>`
+    : "";
+  const warnings = validation.warnings.length
+    ? `<p class="json-patch-note">${escapeHtml(validation.warnings.join(" "))}</p>`
+    : "";
+  return `<div class="new-lens-validation">${errors}${warnings}</div>`;
+}
+
+function renderNewLensField(draft, field) {
+  const value = draft.values[field.key] ?? "";
+  if (field.type === "select") {
+    return `
+      <label class="edit-field">
+        <span>${escapeHtml(field.label)}</span>
+        <select name="${escapeHtml(field.key)}">
+          ${(field.options || []).map((option) => `
+            <option value="${escapeHtml(option)}" ${value === option ? "selected" : ""}>${escapeHtml(option)}</option>
+          `).join("")}
+        </select>
+        ${getEditHint(field)}
+      </label>
+    `;
+  }
+  return renderEditField(draft, field);
+}
+
+function setNewLensMode(mode) {
+  if (!state.newLensDraft || !["manual", "paste", "upload"].includes(mode)) return;
+  state.newLensDraft.mode = mode;
+  state.newLensDraft.message = null;
+  rerenderActiveLens();
+}
+
+function handleNewLensInput(event) {
+  const draft = state.newLensDraft;
+  if (!draft) return;
+
+  if (event.target.matches("[data-new-lens-json]")) {
+    draft.rawJson = event.target.value;
+    draft.message = null;
+    draft.dirty = true;
+    return;
+  }
+
+  if (!event.target.closest("#newLensForm")) return;
+  const fieldName = event.target.name;
+  if (!fieldName) return;
+
+  if (fieldName === "id") draft.autoId = false;
+  if (fieldName === "slug") draft.autoSlug = false;
+
+  if (event.target.type === "checkbox") {
+    draft.values[fieldName] = event.target.checked;
+  } else {
+    draft.values[fieldName] = event.target.value;
+  }
+  draft.dirty = true;
+  updateNewLensIdentitySuggestions(draft);
+}
+
+function updateNewLensIdentitySuggestions(draft) {
+  const suggested = getSuggestedLensIdentity(draft.values);
+  if (draft.autoId && suggested) {
+    draft.values.id = suggested;
+  }
+  if (draft.autoSlug && suggested) {
+    draft.values.slug = suggested;
+  }
+  const form = els.drawerContent?.querySelector("#newLensForm");
+  if (form) {
+    if (draft.autoId && form.elements.id) form.elements.id.value = draft.values.id || "";
+    if (draft.autoSlug && form.elements.slug) form.elements.slug.value = draft.values.slug || "";
+  }
+}
+
+function getSuggestedLensIdentity(values) {
+  const year = safeText(values.yearIntroduced);
+  const manufacturer = safeText(values.manufacturer);
+  const name = safeText(values.name);
+  return slugify([year, manufacturer, name].filter(Boolean).join(" "));
+}
+
+function parseNewLensJsonInput() {
+  const draft = state.newLensDraft;
+  if (!draft) return;
+  const parsed = parseFullLensJson(draft.rawJson);
+  if (parsed.error) {
+    setNewLensMessage("error", parsed.error);
+    rerenderActiveLens();
+    return;
+  }
+
+  loadNewLensObject(parsed.value, "JSON loaded into editor.");
+}
+
+async function loadNewLensJsonFile(file) {
+  if (!state.newLensDraft || !file) return;
+  try {
+    const text = await file.text();
+    const parsed = parseFullLensJson(text);
+    if (parsed.error) {
+      state.newLensDraft.uploadFileName = file.name;
+      setNewLensMessage("error", parsed.error);
+      rerenderActiveLens();
+      return;
+    }
+    state.newLensDraft.rawJson = text;
+    state.newLensDraft.uploadFileName = file.name;
+    loadNewLensObject(parsed.value, "JSON file loaded into editor.");
+  } catch (_error) {
+    setNewLensMessage("error", "Could not read JSON file.");
+    rerenderActiveLens();
+  }
+}
+
+function parseFullLensJson(rawInput) {
+  const raw = safeText(rawInput);
+  if (!raw) return { error: "Paste or upload a full lens JSON object." };
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      if (Array.isArray(parsed.lenses) && parsed.lenses[0] && typeof parsed.lenses[0] === "object") {
+        return { value: parsed.lenses[0] };
+      }
+      return { value: parsed };
+    }
+  } catch (_error) {
+    return { error: "Could not parse JSON. Check brackets, commas and quotes." };
+  }
+  return { error: "JSON must be a single lens object." };
+}
+
+function loadNewLensObject(lensObject, message) {
+  const draft = state.newLensDraft;
+  if (!draft) return;
+  const lens = stripRuntimeLensFields(lensObject);
+  draft.lens = lens;
+  draft.values = createDraftValues(lens, NEW_LENS_FIELDS);
+  draft.autoId = !hasValue(draft.values.id);
+  draft.autoSlug = !hasValue(draft.values.slug);
+  updateNewLensIdentitySuggestions(draft);
+  draft.validation = validateNewLens(buildNewLensFromDraft(draft, { applySuggestions: false }));
+  draft.dirty = true;
+  setNewLensMessage(draft.validation.errors.length ? "error" : "success", message);
+  rerenderActiveLens();
+}
+
+function buildNewLensFromDraft(draft, options = {}) {
+  const lens = { ...(draft.lens && typeof draft.lens === "object" ? stripRuntimeLensFields(draft.lens) : {}) };
+  NEW_LENS_FIELDS.forEach((field) => {
+    if (field.type === "checkbox") {
+      lens[field.key] = Boolean(draft.values[field.key]);
+      return;
+    }
+    const rawValue = safeText(draft.values[field.key]);
+    lens[field.key] = parseEditValue(rawValue, field.type, field.key);
+  });
+
+  if (options.applySuggestions !== false) {
+    const suggested = getSuggestedLensIdentity(draft.values);
+    if (!hasValue(lens.id) && suggested) lens.id = suggested;
+    if (!hasValue(lens.slug) && suggested) lens.slug = suggested;
+  }
+  lens.slug = safeText(lens.slug) || slugify(lens.id);
+  if (!hasValue(lens.fileName) && hasValue(lens.slug)) {
+    lens.fileName = `${lens.slug}.json`;
+  }
+  if (!hasValue(lens.status)) {
+    lens.status = "ready";
+  }
+  return lens;
+}
+
+function validateNewLens(lens) {
+  const errors = [];
+  const warnings = [];
+  if (!hasValue(lens.id)) errors.push("ID is required.");
+  if (!hasValue(lens.slug)) errors.push("Slug is required.");
+  if (!hasValue(lens.name)) errors.push("Lens name is required.");
+  if (!hasValue(lens.manufacturer)) errors.push("Manufacturer is required.");
+  if (numberOrNull(lens.yearIntroduced) === null && numberOrNull(lens.year_introduced) === null) {
+    errors.push("Year introduced is required.");
+  }
+  if (!hasValue(lens.sources)) warnings.push("Add sources when available.");
+  return { errors, warnings };
+}
+
+async function saveNewLens(form) {
+  const draft = state.newLensDraft;
+  if (!draft || !state.admin.isAdmin || !state.admin.client) return;
+  const lens = buildNewLensFromDraft(draft);
+  const validation = validateNewLens(lens);
+  draft.validation = validation;
+  if (validation.errors.length) {
+    setNewLensMessage("error", validation.errors.join(" "));
+    rerenderActiveLens();
+    return;
+  }
+
+  const requestedStatus = safeText(lens.status).toLowerCase();
+  if (!requestedStatus || requestedStatus === "draft") {
+    if (!confirm("This new lens is draft or has no public status. Save and publish it as ready?")) {
+      return;
+    }
+    lens.status = "ready";
+  }
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Saving...";
+  }
+
+  const saveResult = await saveLensToSupabase(lens);
+  if (saveResult.error) {
+    setNewLensMessage("error", "Could not save new lens. Please try again.");
+    rerenderActiveLens();
+    return;
+  }
+
+  setNewLensMessage("success", "New lens saved and published to Supabase.");
+  const savedLens = saveResult.lens || lens;
+  await reloadLensLibrary();
+  const normalized = normalizeLens({ ...savedLens, _recordSource: "supabase" }, savedLens.fileName || `${savedLens.slug}.json`);
+  if (!state.lenses.some((item) => item.id === normalized.id)) {
+    state.lenses.push(normalized);
+    state.lenses.sort(sortByYearThenImportance);
+  }
+  state.activeLensId = normalized.id;
+  state.editingLensId = "";
+  state.editDraft = null;
+  state.newLensDraft = null;
+  state.drawerMessage = { tone: "success", text: "New lens saved and published to Supabase." };
+  renderAll();
+  rerenderActiveLens();
+}
+
+async function reloadLensLibrary() {
+  const library = await loadLensLibrary();
+  state.lenses = library.lenses;
+  state.libraryStatus = library.status;
+  state.loadError = library.error;
+  renderAll();
+}
+
+async function copyNewLensJson(actionElement) {
+  if (!state.admin.isAdmin || !state.newLensDraft) return;
+  const payload = buildNewLensFromDraft(state.newLensDraft);
+  await copyJsonPayload(payload, actionElement.closest("form") || els.drawerContent);
+}
+
+function setNewLensMessage(tone, text) {
+  if (!state.newLensDraft) return;
+  state.newLensDraft.message = { tone, text };
 }
 
 function getActiveLens() {
@@ -1168,6 +1662,7 @@ function renderLensDetails(lens) {
     ${state.admin.isAdmin ? `
       <div class="admin-lens-actions">
         <button class="secondary-button small" type="button" data-drawer-action="edit-lens">Update lens</button>
+        <button class="secondary-button small" type="button" data-drawer-action="add-new-lens">Add New Lens</button>
         <button class="ghost-button small" type="button" data-drawer-action="copy-json">Copy JSON</button>
         <span class="copy-status" data-copy-status hidden></span>
       </div>
@@ -1222,6 +1717,7 @@ function renderLensEditForm(lens) {
       <h2 id="drawerTitle">${escapeHtml(draft.values.name || lens.name)}</h2>
       <div class="admin-lens-actions">
         <button class="primary-button small" type="submit">Save changes</button>
+        <button class="secondary-button small" type="button" data-drawer-action="add-new-lens">Add New Lens</button>
         <button class="secondary-button small" type="button" data-drawer-action="copy-json">Copy JSON</button>
         <button class="secondary-button small" type="button" data-drawer-action="paste-json">Paste JSON</button>
         <button class="ghost-button small" type="button" data-drawer-action="cancel-edit">Cancel</button>
@@ -1677,7 +2173,7 @@ function updatePublicDraftStatus() {
 }
 
 function hasDirtyPublicDraft() {
-  return Boolean(state.editDraft?.dirty);
+  return Boolean(state.editDraft?.dirty || state.newLensDraft?.dirty);
 }
 
 function clearCurrentPublicDraft() {
@@ -1685,6 +2181,7 @@ function clearCurrentPublicDraft() {
     clearStoredDraft(state.editDraft.storageKey);
   }
   state.editDraft = null;
+  state.newLensDraft = null;
 }
 
 function getPublicDraftStorageKey(lensId) {
