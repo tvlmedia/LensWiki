@@ -6,7 +6,7 @@
     <title>LensWiki Admin</title>
     <meta name="robots" content="noindex">
     <!-- Bump admin asset version after changing admin JS/config. -->
-    <link rel="stylesheet" href="admin.css?v=20260527-3">
+    <link rel="stylesheet" href="admin.css?v=20260527-4">
   </head>
   <body>
     <header class="admin-topbar">
@@ -45,13 +45,8 @@
           <button class="primary-button" id="loginButton" type="submit">Log in</button>
         </form>
 
-        <p class="admin-debug-line" id="adminDebugLine">Supabase client not initialized yet.</p>
-
         <section class="session-panel" id="sessionPanel" hidden>
-          <div>
-            <span>Signed in as</span>
-            <strong id="userEmail"></strong>
-          </div>
+          <strong>Admin session active</strong>
           <button class="secondary-button" id="logoutButton" type="button">Log out</button>
         </section>
 
@@ -88,7 +83,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js?v=20260527-3"></script>
-    <script src="admin.js?v=20260527-3" defer></script>
+    <script src="supabase-config.js?v=20260527-4"></script>
+    <script src="admin.js?v=20260527-4" defer></script>
   </body>
 </html>

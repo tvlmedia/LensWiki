@@ -165,12 +165,6 @@ code {
   gap: 14px;
 }
 
-.admin-debug-line {
-  margin: 14px 0 0;
-  color: var(--subtle);
-  font-size: 0.78rem;
-}
-
 label {
   display: grid;
   gap: 7px;

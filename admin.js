@@ -5,7 +5,6 @@
     accessKicker: document.querySelector("#accessKicker"),
     accessTitle: document.querySelector("#accessTitle"),
     configNotice: document.querySelector("#configNotice"),
-    debugLine: document.querySelector("#adminDebugLine"),
     dashboard: document.querySelector("#adminDashboard"),
     dashboardStatus: document.querySelector("#dashboardStatus"),
     emailInput: document.querySelector("#emailInput"),
@@ -17,7 +16,6 @@
     sessionPanel: document.querySelector("#sessionPanel"),
     statusMessage: document.querySelector("#statusMessage"),
     supabaseRecordCount: document.querySelector("#supabaseRecordCount"),
-    userEmail: document.querySelector("#userEmail"),
   };
 
   const config = {
@@ -32,7 +30,6 @@
   async function init() {
     els.loginForm.addEventListener("submit", handleLogin);
     els.logoutButton.addEventListener("click", handleLogout);
-    updateDebugLine("not initialized");
 
     if (isMissingConfig(config)) {
       els.configNotice.hidden = false;
@@ -43,27 +40,23 @@
     }
 
     if (!isValidSupabaseUrl(config.url)) {
-      showStatus(`Supabase URL is invalid: ${config.url}`, "error");
+      showStatus("Supabase URL is invalid.", "error");
       setLoginDisabled(true);
-      updateDebugLine("invalid URL");
       return;
     }
 
     if (!window.supabase?.createClient) {
       showStatus("Supabase client could not load. Check your connection and CDN access.", "error");
       setLoginDisabled(true);
-      updateDebugLine("CDN failed");
       return;
     }
 
     supabaseClient = window.supabase.createClient(config.url, config.anonKey);
-    updateDebugLine("initialized");
 
     const sessionResult = await safeSupabaseCall(() => supabaseClient.auth.getSession());
     if (sessionResult.error) {
       showStatus(getFriendlySupabaseError(sessionResult.error), "error");
       setLoginDisabled(false);
-      updateDebugLine("connection failed");
       showLoggedOut();
       return;
     }
@@ -73,7 +66,7 @@
       await restoreUser();
     } else {
       showLoggedOut();
-      showStatus("Supabase client initialized.", "info");
+      clearStatus();
     }
 
     supabaseClient.auth.onAuthStateChange((_event, session) => {
@@ -135,7 +128,7 @@
       return;
     }
 
-    showLoggedIn(user);
+    showLoggedIn();
     showAccessState("checking", "Checking admin access...", "Looking for this user in LensWiki admins.");
 
     const { data, error } = await safeSupabaseCall(() =>
@@ -160,7 +153,7 @@
       showAccessState(
         "confirmed",
         "Admin access confirmed.",
-        "Supabase dashboard ready."
+        "Lens editor coming next."
       );
       await loadAdminDashboard();
       return;
@@ -174,17 +167,15 @@
     );
   }
 
-  function showLoggedIn(user) {
+  function showLoggedIn() {
     els.loginForm.hidden = true;
     els.sessionPanel.hidden = false;
-    els.userEmail.textContent = user.email || "Unknown email";
   }
 
   function showLoggedOut() {
     els.loginForm.hidden = false;
     els.sessionPanel.hidden = true;
     els.accessCard.hidden = true;
-    els.userEmail.textContent = "";
     hideDashboard();
     setLoginDisabled(isMissingConfig(config));
   }
@@ -297,20 +288,6 @@
     }
 
     return message;
-  }
-
-  function updateDebugLine(status) {
-    const projectRef = getProjectRef(config.url) || "unknown";
-    const keyType = config.anonKey.startsWith("sb_publishable_") ? "publishable" : "anon/public";
-    els.debugLine.textContent = `Project ref: ${projectRef} · Key type: ${keyType} · Client: ${status}`;
-  }
-
-  function getProjectRef(url) {
-    try {
-      return new URL(url).hostname.split(".")[0] || "";
-    } catch (_error) {
-      return "";
-    }
   }
 
   function renderRecordRow(record) {
