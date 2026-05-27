@@ -157,7 +157,7 @@ code {
 .hero-content {
   width: min(var(--max), calc(100% - 32px));
   margin: 0 auto;
-  padding: 44px 0 74px;
+  padding: 44px 0 30px;
 }
 
 .eyebrow {
@@ -199,23 +199,15 @@ h3 {
 
 .hero-subtitle {
   max-width: 650px;
+  margin-bottom: 0;
   color: #d7dce6;
   font-size: clamp(1rem, 1.6vw, 1.22rem);
 }
 
-.library-copy {
-  max-width: 650px;
-  margin-bottom: 0;
-  color: var(--muted);
-  font-size: 0.96rem;
-}
-
 .hero-stats {
-  position: absolute;
-  left: 50%;
-  bottom: 12px;
-  transform: translateX(-50%);
+  position: relative;
   width: min(var(--max), calc(100% - 32px));
+  margin: 0 auto 20px;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1px;
@@ -1478,13 +1470,10 @@ button.dense-row:hover {
   }
 
   .hero-content {
-    padding: 38px 0 28px;
+    padding: 38px 0 24px;
   }
 
   .hero-stats {
-    position: static;
-    transform: none;
-    width: min(var(--max), calc(100% - 32px));
     margin: 0 auto 16px;
     grid-template-columns: 1fr;
   }
