@@ -113,6 +113,10 @@
   "donorLens": "MIR-20M, MIR-10A, MIR-1B, Helios 77M-4, Helios 44-2, Jupiter-9, Tair-11A and related Soviet optics depending on set.",
   "rehousingInfo": "MKII uses redesigned cine mechanics with internal/hybrid focus, universal gear positions, shimmable PL mount, 15-blade iris, T-stop markings and a 95mm front in common 7-lens sets.",
   "lookSummary": "Painterly, organic and imperfect: sharp center with gentle edge falloff, swirly bokeh, lower contrast, warm/rich tones and very expressive flares.",
+  "cineflares": {
+    "available": true,
+    "url": "https://lenses.cineflares.com/"
+  },
   "characteristics": [
     "Swirly bokeh",
     "Dreamy flares",

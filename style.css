@@ -1456,39 +1456,11 @@ button.dense-row:hover {
   background: transparent;
 }
 
-.flare-prompt {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  margin-top: 18px;
-  padding: 14px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: rgba(255, 255, 255, 0.026);
+.cineflares-cta {
+  margin-top: 14px;
 }
 
-.flare-prompt h3 {
-  margin: 0 0 4px;
-  color: #e7ebf2;
-  font-size: 0.95rem;
-}
-
-.flare-prompt p {
-  margin: 0;
-  color: var(--muted);
-  font-size: 0.88rem;
-  line-height: 1.45;
-}
-
-.flare-prompt-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.flare-prompt-actions a {
+.cineflares-cta a {
   text-decoration: none;
 }
 
@@ -2057,15 +2029,6 @@ button.dense-row:hover {
 
   .drawer-panel {
     padding: 20px;
-  }
-
-  .flare-prompt {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .flare-prompt-actions {
-    justify-content: flex-start;
   }
 
   .edit-grid {

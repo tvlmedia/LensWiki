@@ -82,6 +82,8 @@ const ADMIN_EDIT_FIELDS = [
   { key: "cardLabel", label: "Short archive label", type: "text" },
   { key: "publicSummary", label: "Overview text", type: "textarea" },
   { key: "lookSummary", label: "Look text", type: "textarea" },
+  { key: "cineflaresAvailable", label: "CineFlares available?", type: "toggle" },
+  { key: "cineflaresUrl", label: "CineFlares URL", type: "text" },
   { key: "productionYears", label: "Production years", type: "text" },
   { key: "country", label: "Country", type: "text" },
   { key: "factoryLocation", label: "Factory / location", type: "text" },
@@ -131,7 +133,6 @@ const state = {
   editingLensId: "",
   editDraft: null,
   drawerMessage: null,
-  hiddenFlarePromptLensId: "",
   admin: {
     client: null,
     isAdmin: false,
@@ -605,6 +606,7 @@ function normalizeLens(lens, fileName) {
     rehousingGeneration: safeText(lens.rehousingGeneration),
     rehousingNotes: safeText(lens.rehousingNotes),
     lookSummary: safeText(lens.lookSummary),
+    cineflares: normalizeCineFlares(lens.cineflares),
     characteristics: normalizeArrayField(lens.characteristics, getArrayFieldOptions("characteristics")),
     strengths: normalizeArrayField(lens.strengths, getArrayFieldOptions("strengths")),
     weaknesses: normalizeArrayField(lens.weaknesses, getArrayFieldOptions("weaknesses")),
@@ -916,7 +918,6 @@ function openLens(id) {
   state.editingLensId = "";
   state.editDraft = null;
   state.drawerMessage = null;
-  state.hiddenFlarePromptLensId = "";
   els.drawerContent.replaceChildren(renderLensDetails(lens));
   els.detailDrawer.classList.add("is-open");
   els.detailDrawer.setAttribute("aria-hidden", "false");
@@ -933,7 +934,6 @@ function closeDrawer() {
   state.editingLensId = "";
   state.editDraft = null;
   state.drawerMessage = null;
-  state.hiddenFlarePromptLensId = "";
 }
 
 function rerenderActiveLens() {
@@ -959,12 +959,6 @@ function handleDrawerAction(event) {
     copyActiveLensJson(action).catch(() => {
       showInlineCopyStatus(els.drawerContent, "Clipboard blocked. Copy manually.", "error");
     });
-  }
-
-  if (action.dataset.drawerAction === "hide-flare-prompt") {
-    state.hiddenFlarePromptLensId = state.activeLensId;
-    action.closest(".flare-prompt")?.remove();
-    return;
   }
 
   if (action.dataset.drawerAction === "paste-json") {
@@ -1016,14 +1010,14 @@ function handleDrawerInput(event) {
 
   if (event.target.type === "checkbox") {
     state.editDraft.values[fieldName] = event.target.checked;
-  } else if (event.target.type === "radio" && fieldName === "isRehoused") {
+  } else if (event.target.type === "radio") {
     state.editDraft.values[fieldName] = event.target.value === "true";
   } else {
     state.editDraft.values[fieldName] = event.target.value;
   }
   state.editDraft.dirty = true;
   persistPublicDraft();
-  if (fieldName === "isRehoused") {
+  if (fieldName === "isRehoused" || fieldName === "cineflaresAvailable") {
     rerenderActiveLens();
   } else {
     updatePublicDraftStatus();
@@ -1102,7 +1096,7 @@ function renderLensDetails(lens) {
 
   appendIf(fragment, createEditorialSection("Overview", getOverviewSummary(lens)));
   appendIf(fragment, createEditorialSection("Look", lens.lookSummary));
-  appendIf(fragment, createFlarePromptSection(lens));
+  appendIf(fragment, createCineFlaresSection(lens));
   appendIf(fragment, createYoutubeSection(lens));
   appendIf(fragment, createDetailSection("Key specs", createFieldGrid(factFields)));
   appendIf(fragment, createFocalLengthSpecsSection(lens.focalLengthSpecs));
@@ -1300,6 +1294,7 @@ function renderEditField(draft, field) {
 }
 
 function shouldShowEditField(draft, field) {
+  if (field.key === "cineflaresUrl") return Boolean(draft.values.cineflaresAvailable);
   if (!REHOUSING_FIELD_KEYS.has(field.key)) return true;
   return Boolean(draft.values.isRehoused);
 }
@@ -1464,6 +1459,8 @@ function buildUpdatedLensFromDraft(lens, draft) {
   const updated = { ...toExportLens(lens) };
 
   ADMIN_EDIT_FIELDS.forEach((field) => {
+    if (field.key === "cineflaresAvailable" || field.key === "cineflaresUrl") return;
+
     if (field.type === "checkbox" || field.type === "toggle") {
       updated[field.key] = Boolean(draft.values[field.key]);
       return;
@@ -1473,6 +1470,12 @@ function buildUpdatedLensFromDraft(lens, draft) {
     updated[field.key] = parseEditValue(rawValue, field.type, field.key);
   });
 
+  updated.cineflares = {
+    available: Boolean(draft.values.cineflaresAvailable),
+    url: draft.values.cineflaresAvailable
+      ? safeText(draft.values.cineflaresUrl, "https://lenses.cineflares.com/")
+      : ""
+  };
   updated.id = lens.id;
   updated.slug = updated.slug || lens.slug || slugify(lens.id);
   updated.fileName = lens.fileName || lens.sourceFile || `${updated.slug}.json`;
@@ -1526,6 +1529,16 @@ function getPublicDraftStorageKey(lensId) {
 
 function createDraftValues(lens, fields) {
   return fields.reduce((values, field) => {
+    if (field.key === "cineflaresAvailable") {
+      values[field.key] = Boolean(lens.cineflares?.available);
+      return values;
+    }
+
+    if (field.key === "cineflaresUrl") {
+      values[field.key] = lens.cineflares?.url || "https://lenses.cineflares.com/";
+      return values;
+    }
+
     values[field.key] = field.type === "checkbox" || field.type === "toggle"
       ? Boolean(lens[field.key])
       : serializeEditValue(lens[field.key], field.type, field.key);
@@ -1594,22 +1607,16 @@ function createEditorialSection(title, content) {
   return createDetailSection(title, wrapper);
 }
 
-function createFlarePromptSection(lens) {
-  if (state.hiddenFlarePromptLensId === lens.id) return null;
+function createCineFlaresSection(lens) {
+  if (!lens.cineflares?.available) return null;
 
   const section = document.createElement("section");
-  section.className = "flare-prompt";
+  section.className = "cineflares-cta";
+  const url = lens.cineflares.url || "https://lenses.cineflares.com/";
   section.innerHTML = `
-    <div>
-      <h3>Check flare behavior?</h3>
-      <p>Compare lens flare references on CineFlares.</p>
-    </div>
-    <div class="flare-prompt-actions">
-      <a class="secondary-button small" href="https://lenses.cineflares.com/" target="_blank" rel="noopener noreferrer">
-        Yes, open CineFlares
-      </a>
-      <button class="ghost-button small" type="button" data-drawer-action="hide-flare-prompt">No</button>
-    </div>
+    <a class="secondary-button small" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">
+      Check flares
+    </a>
   `;
   return section;
 }
@@ -2987,6 +2994,18 @@ function normalizeImportance(value) {
 function normalizeConfidence(value) {
   const confidence = safeText(value, "needs verification").toLowerCase();
   return KNOWN_CONFIDENCE.includes(confidence) ? confidence : "needs verification";
+}
+
+function normalizeCineFlares(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return { available: false, url: "" };
+  }
+
+  const available = parseBoolean(value.available);
+  return {
+    available,
+    url: available ? safeText(value.url, "https://lenses.cineflares.com/") : safeText(value.url)
+  };
 }
 
 function confidenceClass(confidence) {
