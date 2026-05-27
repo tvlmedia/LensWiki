@@ -8,6 +8,7 @@
     "strengths",
     "weaknesses",
     "closeFocus",
+    "youtubeEmbeds",
     "sources",
     "famousUses",
     "focalLengthSpecs"
@@ -966,8 +967,9 @@
     delete button.dataset.originalText;
   }
 
-  function serializeField(value, type) {
+  function serializeField(value, type, key = "") {
     if (!hasValue(value)) return "";
+    if (key === "youtubeEmbeds") return normalizeYouTubeSamples(value).join("\n");
     if (type === "list") return normalizeArrayField(value).map(formatListItem).join(", ");
     if (type === "lines") return normalizeArrayField(value).map(formatListItem).join("\n");
     if (type === "structured") {
@@ -986,6 +988,7 @@
       const number = Number(value);
       return Number.isFinite(number) ? number : "";
     }
+    if (key === "youtubeEmbeds") return normalizeYouTubeSamples(value);
     if (NORMALIZED_ARRAY_FIELDS.has(key)) {
       return normalizeArrayField(value, {
         fieldName: key,
@@ -1079,7 +1082,7 @@
         separator: field.type === "lines" ? "lines" : "",
         preserveObjects: field.type === "structured"
       });
-      return serializeField(normalized, field.type);
+      return serializeField(normalized, field.type, field.key);
     }
     if (field.type === "structured") {
       const items = Array.isArray(value) ? value : [value];
@@ -1125,7 +1128,7 @@
     return LENS_FIELDS.reduce((values, field) => {
       values[field.key] = field.type === "checkbox" || field.type === "toggle"
         ? Boolean(lens[field.key])
-        : serializeField(lens[field.key], field.type);
+        : serializeField(lens[field.key], field.type, field.key);
       return values;
     }, {});
   }
@@ -1244,6 +1247,67 @@
     return normalizeArrayField(value, { separator: "lines" });
   }
 
+  function normalizeYouTubeSamples(value) {
+    const urls = [];
+    const seen = new Set();
+    normalizeArrayField(value, { fieldName: "youtubeEmbeds", separator: "lines" }).forEach((item) => {
+      const sample = getYouTubeSample(item);
+      if (!sample || seen.has(sample.id)) return;
+      seen.add(sample.id);
+      urls.push(sample.url);
+    });
+    return urls;
+  }
+
+  function getYouTubeSample(value) {
+    const raw = cleanArrayItem(value);
+    if (!raw) return null;
+
+    const iframeSrc = raw.match(/\bsrc=["']([^"']+)["']/i)?.[1];
+    let text = iframeSrc || raw;
+    if (/^(www\.|m\.)?youtube\.com|^youtu\.be/i.test(text)) {
+      text = `https://${text}`;
+    }
+
+    const plainId = text.match(/^[A-Za-z0-9_-]{11}$/)?.[0];
+    if (plainId) return buildYouTubeSample(plainId);
+
+    try {
+      const url = new URL(text);
+      const host = url.hostname.replace(/^www\./, "").replace(/^m\./, "");
+      let id = "";
+      if (host === "youtu.be") {
+        id = url.pathname.split("/").filter(Boolean)[0] || "";
+      } else if (host === "youtube.com" || host === "youtube-nocookie.com") {
+        const parts = url.pathname.split("/").filter(Boolean);
+        if (url.searchParams.has("v")) {
+          id = url.searchParams.get("v") || "";
+        } else if (["embed", "shorts", "live"].includes(parts[0])) {
+          id = parts[1] || "";
+        }
+      }
+
+      id = normalizeYouTubeId(id);
+      return id ? buildYouTubeSample(id) : null;
+    } catch (_error) {
+      const embeddedId = text.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{6,})/i)?.[1];
+      const id = normalizeYouTubeId(embeddedId);
+      return id ? buildYouTubeSample(id) : null;
+    }
+  }
+
+  function normalizeYouTubeId(value) {
+    return safeText(value).split(/[?&#/]/)[0].replace(/[^A-Za-z0-9_-]/g, "");
+  }
+
+  function buildYouTubeSample(id) {
+    return {
+      id,
+      url: `https://www.youtube.com/watch?v=${id}`,
+      embedUrl: `https://www.youtube.com/embed/${id}`
+    };
+  }
+
   function normalizeArrayField(value, options = {}) {
     if (Array.isArray(value)) {
       if (options.preserveObjects && value.some((item) => item && typeof item === "object")) {
@@ -1307,6 +1371,10 @@
     const cleaned = { ...lens };
     NORMALIZED_ARRAY_FIELDS.forEach((fieldName) => {
       if (hasValue(cleaned[fieldName])) {
+        if (fieldName === "youtubeEmbeds") {
+          cleaned[fieldName] = normalizeYouTubeSamples(cleaned[fieldName]);
+          return;
+        }
         const field = getLensField(fieldName);
         cleaned[fieldName] = normalizeArrayField(cleaned[fieldName], {
           fieldName,

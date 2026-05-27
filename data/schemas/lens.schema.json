@@ -235,6 +235,7 @@
     },
     "youtubeEmbeds": {
       "type": "array",
+      "description": "Canonical YouTube sample links. Editors may paste youtu.be, watch, embed or Shorts links; the app normalizes them.",
       "items": {
         "type": "string"
       }

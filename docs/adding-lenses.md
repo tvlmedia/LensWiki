@@ -37,4 +37,6 @@ The site also supports richer fields such as `manufacturer`, `publicSummary`, `l
 
 Use `isRehoused: true` only when the record describes a rehoused lens or rehoused lens family. Leave it `false` for original cinema lens families, even if modern rehoused copies exist.
 
+For `youtubeEmbeds`, use one YouTube sample per array item. The app accepts `youtu.be`, `youtube.com/watch`, `/embed/` and Shorts links, then stores clean canonical video URLs.
+
 Use `data/templates/lens-template.json` as a starting point. The template is not loaded by the website because only files in `data/lenses/` are discovered.

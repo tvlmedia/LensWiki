@@ -1800,12 +1800,30 @@ button.dense-row:hover {
   gap: 10px;
 }
 
+.youtube-card {
+  display: grid;
+  gap: 8px;
+}
+
 .youtube-grid iframe {
   width: 100%;
   aspect-ratio: 16 / 9;
   border: 0;
   border-radius: var(--radius);
   background: #000;
+}
+
+.youtube-link {
+  justify-self: start;
+  color: #dff3ff;
+  font-size: 0.84rem;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(47, 156, 255, 0.38);
+}
+
+.youtube-link:hover {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
 }
 
 @media (max-width: 1040px) {
