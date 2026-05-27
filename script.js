@@ -1084,7 +1084,9 @@ function handleDrawerInput(event) {
       state.editDraft.jsonPatch.error = "";
       state.editDraft.jsonPatch.preview = [];
       state.editDraft.jsonPatch.ignored = [];
-      state.editDraft.jsonPatch.patchValues = null;
+      state.editDraft.jsonPatch.patchLens = null;
+      state.editDraft.jsonPatch.typeSummary = [];
+      state.editDraft.jsonPatch.warnings = [];
     }
     return;
   }
@@ -1132,12 +1134,17 @@ function startLensEdit(lens) {
 function createPublicEditDraft(lens) {
   const storageKey = getPublicDraftStorageKey(lens.id);
   const autosaved = readStoredDraft(storageKey);
+  const lensObject = autosaved?.lens && typeof autosaved.lens === "object"
+    ? autosaved.lens
+    : toExportLens(lens);
   return {
     lensId: lens.id,
     storageKey,
-    values: createDraftValues(lens, ADMIN_EDIT_FIELDS),
+    lens: lensObject,
+    values: createDraftValues(lensObject, ADMIN_EDIT_FIELDS),
     dirty: false,
-    autosavedValues: autosaved?.values || null
+    autosavedValues: autosaved?.values || null,
+    autosavedLens: autosaved?.lens || null
   };
 }
 
@@ -1262,8 +1269,11 @@ function renderJsonPatchPanel(patchState) {
       `).join("")}
     </div>
   ` : "";
-  const ignored = patchState.ignored?.length
-    ? `<p class="json-patch-note">Ignored unknown fields: ${escapeHtml(patchState.ignored.join(", "))}</p>`
+  const typeSummary = patchState.typeSummary?.length
+    ? `<p class="json-patch-note">Detected field types: ${escapeHtml(patchState.typeSummary.join("; "))}</p>`
+    : "";
+  const warnings = patchState.warnings?.length
+    ? `<p class="json-patch-error">${escapeHtml(patchState.warnings.join(" "))}</p>`
     : "";
 
   return `
@@ -1275,9 +1285,11 @@ function renderJsonPatchPanel(patchState) {
         </div>
         <button class="ghost-button small" type="button" data-drawer-action="cancel-json-patch">Cancel</button>
       </div>
+      <p class="json-patch-note">You can paste either a full lens JSON object or a partial patch. Nested objects and arrays are preserved.</p>
       <textarea data-json-patch-input rows="8" placeholder='"focalLengths": ["16mm", "20mm"]'>${escapeHtml(patchState.raw || "")}</textarea>
       ${patchState.error ? `<p class="json-patch-error">${escapeHtml(patchState.error)}</p>` : ""}
-      ${ignored}
+      ${warnings}
+      ${typeSummary}
       ${previewRows}
       <div class="admin-lens-actions">
         <button class="secondary-button small" type="button" data-drawer-action="preview-json-patch">Preview changes</button>
@@ -1294,7 +1306,10 @@ function openPublicJsonPatchPanel() {
     raw: state.editDraft.jsonPatch?.raw || "",
     preview: [],
     ignored: [],
-    error: ""
+    error: "",
+    typeSummary: [],
+    warnings: [],
+    patchLens: null
   };
   rerenderActiveLens();
 }
@@ -1320,17 +1335,23 @@ function evaluatePublicJsonPatch(options = {}) {
     patchState.error = parsed.error;
     patchState.preview = [];
     patchState.ignored = [];
-    patchState.patchValues = null;
+    patchState.patchLens = null;
+    patchState.typeSummary = [];
+    patchState.warnings = [];
     return false;
   }
 
-  const prepared = prepareDraftPatch(parsed.value, state.editDraft.values, ADMIN_EDIT_FIELDS);
+  const lens = getActiveLens();
+  const currentLens = lens ? buildUpdatedLensFromDraft(lens, state.editDraft) : state.editDraft.lens;
+  const prepared = prepareLensJsonPatch(parsed.value, currentLens);
   patchState.error = prepared.error === "No changes to apply."
-    ? options.emptyMessage || prepared.error
+    ? options.emptyMessage || "No changes found."
     : prepared.error;
   patchState.preview = prepared.preview;
   patchState.ignored = prepared.ignored;
-  patchState.patchValues = prepared.patchValues;
+  patchState.patchLens = prepared.patchLens;
+  patchState.typeSummary = prepared.typeSummary;
+  patchState.warnings = prepared.warnings;
   return Boolean(prepared.preview.length);
 }
 
@@ -1341,15 +1362,20 @@ function applyPublicJsonPatch() {
     return;
   }
 
-  Object.assign(state.editDraft.values, state.editDraft.jsonPatch.patchValues);
-  const ignoredFields = state.editDraft.jsonPatch.ignored || [];
+  const patchLens = state.editDraft.jsonPatch.patchLens;
+  const warnings = state.editDraft.jsonPatch.warnings || [];
+  const typeSummary = state.editDraft.jsonPatch.typeSummary || [];
+  state.editDraft.lens = patchLens;
+  state.editDraft.values = createDraftValues(patchLens, ADMIN_EDIT_FIELDS);
   state.editDraft.dirty = true;
   state.editDraft.jsonPatch = null;
+  const detail = [
+    typeSummary.length ? `Detected: ${typeSummary.join("; ")}.` : "",
+    warnings.join(" ")
+  ].filter(Boolean).join(" ");
   state.drawerMessage = {
     tone: "success",
-    text: ignoredFields.length
-      ? `Changes applied. Ignored unsupported fields: ${ignoredFields.join(", ")}.`
-      : "Changes applied."
+    text: `Changes applied. Click Save changes to publish.${detail ? ` ${detail}` : ""}`
   };
   persistPublicDraft();
   rerenderActiveLens();
@@ -1574,12 +1600,11 @@ async function saveLensToSupabase(lens) {
 
 function getPublishStatusForSave(status) {
   const normalized = safeText(status).trim().toLowerCase();
-  if (!normalized || normalized === "draft") return "ready";
-  return normalized;
+  return normalized === "published" ? "published" : "ready";
 }
 
 function buildUpdatedLensFromDraft(lens, draft) {
-  const updated = { ...toExportLens(lens) };
+  const updated = { ...(draft.lens && typeof draft.lens === "object" ? stripRuntimeLensFields(draft.lens) : toExportLens(lens)) };
 
   ADMIN_EDIT_FIELDS.forEach((field) => {
     if (field.key === "cineflaresAvailable" || field.key === "cineflaresUrl") return;
@@ -1589,26 +1614,40 @@ function buildUpdatedLensFromDraft(lens, draft) {
       return;
     }
 
+    if (hasOwn(updated, field.key) && updated[field.key] === null && safeText(draft.values[field.key]) === "") {
+      updated[field.key] = null;
+      return;
+    }
+
     const rawValue = safeText(draft.values[field.key]);
     updated[field.key] = parseEditValue(rawValue, field.type, field.key);
   });
 
+  const existingCineflares = isPlainObject(updated.cineflares) ? updated.cineflares : {};
   updated.cineflares = {
+    ...existingCineflares,
     available: Boolean(draft.values.cineflaresAvailable),
     url: draft.values.cineflaresAvailable
       ? safeText(draft.values.cineflaresUrl, "https://lenses.cineflares.com/")
       : ""
   };
-  updated.id = lens.id;
-  updated.slug = updated.slug || lens.slug || slugify(lens.id);
-  updated.fileName = lens.fileName || lens.sourceFile || `${updated.slug}.json`;
+  updated.id = safeText(updated.id) || lens.id;
+  updated.slug = safeText(updated.slug) || lens.slug || slugify(updated.id);
+  updated.fileName = safeText(updated.fileName) || lens.fileName || lens.sourceFile || `${updated.slug}.json`;
   return updated;
 }
 
 function restorePublicAutosaveDraft() {
-  if (!state.editDraft?.autosavedValues) return;
-  state.editDraft.values = { ...state.editDraft.values, ...state.editDraft.autosavedValues };
+  if (!state.editDraft?.autosavedValues && !state.editDraft?.autosavedLens) return;
+  if (state.editDraft.autosavedLens && typeof state.editDraft.autosavedLens === "object") {
+    state.editDraft.lens = state.editDraft.autosavedLens;
+  }
+  state.editDraft.values = {
+    ...createDraftValues(state.editDraft.lens, ADMIN_EDIT_FIELDS),
+    ...(state.editDraft.autosavedValues || {})
+  };
   state.editDraft.autosavedValues = null;
+  state.editDraft.autosavedLens = null;
   state.editDraft.dirty = true;
   persistPublicDraft();
   rerenderActiveLens();
@@ -1618,6 +1657,7 @@ function discardPublicAutosaveDraft() {
   if (!state.editDraft) return;
   clearStoredDraft(state.editDraft.storageKey);
   state.editDraft.autosavedValues = null;
+  state.editDraft.autosavedLens = null;
   rerenderActiveLens();
 }
 
@@ -1625,6 +1665,7 @@ function persistPublicDraft() {
   if (!state.editDraft) return;
   writeStoredDraft(state.editDraft.storageKey, {
     lensId: state.editDraft.lensId,
+    lens: state.editDraft.lens,
     values: state.editDraft.values,
     savedAt: new Date().toISOString()
   });
@@ -2362,11 +2403,17 @@ function toExportLens(lens) {
     _supabaseUpdatedAt,
     ...exportable
   } = lens;
-  const donorProductionYearsByLens = normalizeDonorProductionYearsMap(exportable.donorProductionYearsByLens);
-  if (Object.keys(donorProductionYearsByLens).length) {
-    exportable.donorProductionYearsByLens = donorProductionYearsByLens;
-  } else {
-    delete exportable.donorProductionYearsByLens;
+  if (hasOwn(exportable, "donorProductionYearsByLens")) {
+    if (exportable.donorProductionYearsByLens === null) {
+      exportable.donorProductionYearsByLens = null;
+    } else {
+      const donorProductionYearsByLens = normalizeDonorProductionYearsMap(exportable.donorProductionYearsByLens);
+      if (Object.keys(donorProductionYearsByLens).length) {
+        exportable.donorProductionYearsByLens = donorProductionYearsByLens;
+      } else {
+        delete exportable.donorProductionYearsByLens;
+      }
+    }
   }
   return exportable;
 }
@@ -2848,83 +2895,35 @@ function parseJsonPatchInput(rawInput) {
   return { error: "Could not parse JSON. Check brackets, commas and quotes." };
 }
 
-function prepareDraftPatch(patchObject, currentValues, fields) {
-  const fieldMap = new Map(fields.map((field) => [field.key, field]));
-  const normalizedPatch = normalizeLensPatchObject(patchObject);
-  const patchValues = {};
-  const preview = [];
-  const ignored = [];
-
-  if (hasOwn(normalizedPatch, "sampleFootage") && !Array.isArray(normalizedPatch.sampleFootage)) {
-    return {
-      error: "sampleFootage must be a JSON array.",
-      ignored,
-      patchValues,
-      preview
-    };
-  }
-
-  if (
-    hasOwn(normalizedPatch, "donorProductionYearsByLens")
-    && (!normalizedPatch.donorProductionYearsByLens
-      || typeof normalizedPatch.donorProductionYearsByLens !== "object"
-      || Array.isArray(normalizedPatch.donorProductionYearsByLens))
-  ) {
-    return {
-      error: "donorProductionYearsByLens must be a JSON object.",
-      ignored,
-      patchValues,
-      preview
-    };
-  }
-
-  Object.entries(normalizedPatch).forEach(([key, value]) => {
-    const field = fieldMap.get(key);
-    if (!field) {
-      ignored.push(key);
-      return;
-    }
-
-    const nextValue = serializePatchValue(value, field);
-    const currentValue = currentValues[field.key] ?? "";
-    if (String(currentValue) === String(nextValue)) return;
-
-    patchValues[field.key] = nextValue;
-    preview.push({
-      key: field.key,
-      label: field.label,
-      currentDisplay: formatPatchPreviewValue(currentValue),
-      nextDisplay: formatPatchPreviewValue(nextValue)
-    });
-  });
+function prepareLensJsonPatch(patchObject, currentLens) {
+  const current = stripRuntimeLensFields(currentLens || {});
+  const normalizedPatch = normalizePastedLensJson(patchObject);
+  const patchLens = isLikelyFullLensJson(normalizedPatch)
+    ? buildLensReplacement(current, normalizedPatch)
+    : deepMergeJsonObject(current, normalizedPatch);
+  const previewKeys = getJsonPatchPreviewKeys(current, patchLens, normalizedPatch);
+  const preview = previewKeys
+    .filter((key) => !jsonValuesEqual(current[key], patchLens[key]))
+    .map((key) => ({
+      key,
+      label: getLensFieldLabel(key),
+      currentDisplay: formatPatchPreviewValue(current[key]),
+      nextDisplay: formatPatchPreviewValue(patchLens[key])
+    }));
+  const diagnostics = getJsonPatchDiagnostics(patchLens, normalizedPatch);
 
   return {
     error: preview.length ? "" : "No changes to apply.",
-    ignored,
-    patchValues,
-    preview
+    ignored: [],
+    patchLens,
+    preview,
+    typeSummary: diagnostics.typeSummary,
+    warnings: diagnostics.warnings
   };
 }
 
-function normalizeLensPatchObject(patchObject) {
-  const normalized = { ...patchObject };
-  const fallbackSpecsField = FOCAL_LENGTH_SPECS_FIELDS.find((fieldName) => fieldName !== "focalLengthSpecs" && hasOwn(normalized, fieldName));
-  if (!hasOwn(normalized, "focalLengthSpecs") && fallbackSpecsField) {
-    normalized.focalLengthSpecs = normalized[fallbackSpecsField];
-  }
-  FOCAL_LENGTH_SPECS_FIELDS.forEach((fieldName) => {
-    if (fieldName !== "focalLengthSpecs") {
-      delete normalized[fieldName];
-    }
-  });
-
-  if (hasOwn(normalized, "cineflares")) {
-    const cineflares = normalizeCineFlares(normalized.cineflares);
-    normalized.cineflaresAvailable = cineflares.available;
-    normalized.cineflaresUrl = cineflares.url || "https://lenses.cineflares.com/";
-    delete normalized.cineflares;
-  }
-
+function normalizePastedLensJson(patchObject) {
+  const normalized = stripRuntimeLensFields(cloneJsonValue(patchObject) || {});
   if (!hasOwn(normalized, "isRehoused") && hasOwn(normalized, "type")) {
     const type = normalizeArrayField(normalized.type, getArrayFieldOptions("type"));
     if (typeSuggestsRehoused(type)) {
@@ -2934,30 +2933,139 @@ function normalizeLensPatchObject(patchObject) {
   return normalized;
 }
 
-function serializePatchValue(value, field) {
-  if (field.type === "checkbox" || field.type === "toggle") return parseBoolean(value);
-  if (field.type === "number") return hasValue(value) ? String(value) : "";
-  if (NORMALIZED_ARRAY_FIELDS.has(field.key)) {
-    const normalized = normalizeArrayField(value, {
-      ...getArrayFieldOptions(field.key, field.type),
-      preserveObjects: field.type === "structured"
-    });
-    return serializeEditValue(normalized, field.type, field.key);
+function isLikelyFullLensJson(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const keys = Object.keys(value);
+  const hasIdentity = hasValue(value.id) || hasValue(value.slug);
+  if (hasIdentity && hasValue(value.name)) return true;
+  if (hasIdentity && keys.length >= 4) return true;
+  return hasValue(value.name) && hasValue(value.yearIntroduced) && keys.length >= 4;
+}
+
+function buildLensReplacement(currentLens, replacement) {
+  const next = { ...stripRuntimeLensFields(replacement) };
+  if (!hasValue(next.id)) next.id = currentLens.id;
+  if (!hasValue(next.slug)) next.slug = currentLens.slug || slugify(next.id);
+  if (!hasValue(next.fileName)) next.fileName = currentLens.fileName || (next.slug ? `${next.slug}.json` : "");
+  return next;
+}
+
+function deepMergeJsonObject(base, patch) {
+  const next = cloneJsonValue(base) || {};
+  Object.entries(patch || {}).forEach(([key, value]) => {
+    if (isPlainObject(value) && isPlainObject(next[key])) {
+      next[key] = deepMergeJsonObject(next[key], value);
+      return;
+    }
+    next[key] = cloneJsonValue(value);
+  });
+  return next;
+}
+
+function isPlainObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function cloneJsonValue(value) {
+  if (value === undefined) return undefined;
+  try {
+    return structuredClone(value);
+  } catch (_error) {
+    return JSON.parse(JSON.stringify(value));
   }
-  if (field.type === "structured") {
-    const items = Array.isArray(value) ? value : [value];
-    return JSON.stringify(items, null, 2);
+}
+
+function stripRuntimeLensFields(lens) {
+  const {
+    searchText,
+    sourceFile,
+    videoSamples,
+    _isRehousedExplicit,
+    _recordSource,
+    _supabaseUpdatedAt,
+    ...exportable
+  } = cloneJsonValue(lens || {});
+  return exportable;
+}
+
+function getJsonPatchPreviewKeys(currentLens, patchLens, patchObject) {
+  const keys = isLikelyFullLensJson(patchObject)
+    ? [...Object.keys(currentLens || {}), ...Object.keys(patchLens || {})]
+    : Object.keys(patchObject || {});
+  return Array.from(new Set(keys));
+}
+
+function jsonValuesEqual(a, b) {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+function getLensFieldLabel(key) {
+  const field = ADMIN_EDIT_FIELDS.find((item) => item.key === key);
+  if (field) return field.label;
+  return safeText(key)
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getJsonPatchDiagnostics(lens, patchObject) {
+  const typeSummary = [];
+  const warnings = [];
+  const fieldsToDescribe = Array.from(new Set([
+    ...FOCAL_LENGTH_SPECS_FIELDS.filter((fieldName) => hasOwn(patchObject, fieldName)),
+    ...["sampleFootage", "cineflares", "donorProductionYearsByLens"].filter((fieldName) => hasOwn(patchObject, fieldName))
+  ]));
+
+  fieldsToDescribe.forEach((fieldName) => {
+    const value = fieldName === "focalLengthSpecs"
+      ? lens.focalLengthSpecs
+      : patchObject[fieldName];
+    typeSummary.push(`${fieldName}: ${describeJsonValueType(value)}`);
+  });
+
+  const touchedFocalSpecs = FOCAL_LENGTH_SPECS_FIELDS.some((fieldName) => hasOwn(patchObject, fieldName));
+  const specs = lens.focalLengthSpecs;
+  if (touchedFocalSpecs && Array.isArray(specs) && specs.length && !hasObjectRows(specs)) {
+    warnings.push("focalLengthSpecs is malformed: expected array of objects.");
   }
-  if (field.type === "object") {
-    return JSON.stringify(normalizeDonorProductionYearsMap(value), null, 2);
+
+  if (hasOwn(patchObject, "sampleFootage") && !Array.isArray(patchObject.sampleFootage)) {
+    warnings.push("sampleFootage is expected to be an array.");
   }
-  if (Array.isArray(value)) return value.map(formatListItem).join(field.type === "lines" ? "\n" : ", ");
-  if (value && typeof value === "object") return JSON.stringify(value, null, 2);
-  return safeText(value);
+
+  if (
+    hasOwn(patchObject, "donorProductionYearsByLens")
+    && (!isPlainObject(patchObject.donorProductionYearsByLens))
+  ) {
+    warnings.push("donorProductionYearsByLens is expected to be an object.");
+  }
+
+  return { typeSummary, warnings };
+}
+
+function describeJsonValueType(value) {
+  if (Array.isArray(value)) {
+    const objectRows = value.filter((item) => item && typeof item === "object" && !Array.isArray(item)).length;
+    return objectRows ? `array with ${objectRows} object row${objectRows === 1 ? "" : "s"}` : `array with ${value.length} item${value.length === 1 ? "" : "s"}`;
+  }
+  if (value === null) return "null";
+  if (value && typeof value === "object") return "object";
+  return typeof value;
 }
 
 function formatPatchPreviewValue(value) {
-  const text = safeText(value);
+  let text = "";
+  if (value === null) {
+    text = "null";
+  } else if (value && typeof value === "object") {
+    try {
+      text = JSON.stringify(value, null, 2);
+    } catch (_error) {
+      text = formatValue(value);
+    }
+  } else {
+    text = safeText(value);
+  }
   return text.length > 260 ? `${text.slice(0, 257).trim()}...` : text;
 }
 
