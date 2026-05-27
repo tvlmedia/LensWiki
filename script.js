@@ -40,6 +40,7 @@ const NORMALIZED_ARRAY_FIELDS = new Set([
   "strengths",
   "weaknesses",
   "closeFocus",
+  "sampleFootage",
   "youtubeEmbeds",
   "sources",
   "famousUses",
@@ -106,6 +107,7 @@ const ADMIN_EDIT_FIELDS = [
   { key: "rehousingGeneration", label: "Rehousing generation", type: "text" },
   { key: "rehousingNotes", label: "Rehousing notes", type: "textarea" },
   { key: "famousUses", label: "Known use", type: "structured" },
+  { key: "sampleFootage", label: "Sample footage", type: "structured" },
   { key: "youtubeEmbeds", label: "YouTube sample links", type: "lines" },
   { key: "relatedLensIds", label: "Related lens IDs", type: "list" },
   { key: "sources", label: "Sources", type: "structured" },
@@ -611,6 +613,7 @@ function normalizeLens(lens, fileName) {
     strengths: normalizeArrayField(lens.strengths, getArrayFieldOptions("strengths")),
     weaknesses: normalizeArrayField(lens.weaknesses, getArrayFieldOptions("weaknesses")),
     famousUses: normalizeArrayField(lens.famousUses, { fieldName: "famousUses", preserveObjects: true }),
+    sampleFootage: normalizeArrayField(lens.sampleFootage, { fieldName: "sampleFootage", preserveObjects: true }),
     youtubeEmbeds: normalizeYouTubeSamples(lens.youtubeEmbeds),
     videoSamples: getLensVideoSamples(lens),
     imageUrls: asArray(lens.imageUrls),
@@ -2546,6 +2549,15 @@ function prepareDraftPatch(patchObject, currentValues, fields) {
   const preview = [];
   const ignored = [];
 
+  if (hasOwn(normalizedPatch, "sampleFootage") && !Array.isArray(normalizedPatch.sampleFootage)) {
+    return {
+      error: "sampleFootage must be a JSON array.",
+      ignored,
+      patchValues,
+      preview
+    };
+  }
+
   Object.entries(normalizedPatch).forEach(([key, value]) => {
     const field = fieldMap.get(key);
     if (!field) {
@@ -2576,6 +2588,13 @@ function prepareDraftPatch(patchObject, currentValues, fields) {
 
 function normalizeLensPatchObject(patchObject) {
   const normalized = { ...patchObject };
+  if (hasOwn(normalized, "cineflares")) {
+    const cineflares = normalizeCineFlares(normalized.cineflares);
+    normalized.cineflaresAvailable = cineflares.available;
+    normalized.cineflaresUrl = cineflares.url || "https://lenses.cineflares.com/";
+    delete normalized.cineflares;
+  }
+
   if (!hasOwn(normalized, "isRehoused") && hasOwn(normalized, "type")) {
     const type = normalizeArrayField(normalized.type, getArrayFieldOptions("type"));
     if (typeSuggestsRehoused(type)) {
