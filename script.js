@@ -1075,6 +1075,7 @@ function renderLensDetails(lens) {
 
   appendIf(fragment, createEditorialSection("Overview", getOverviewSummary(lens)));
   appendIf(fragment, createEditorialSection("Look", lens.lookSummary));
+  appendIf(fragment, createYoutubeSection(lens.youtubeEmbeds));
   appendIf(fragment, createDetailSection("Key specs", createFieldGrid(factFields)));
   appendIf(fragment, createFocalLengthSpecsSection(lens.focalLengthSpecs));
   appendIf(fragment, createListSection("Character", lens.characteristics));
@@ -1083,7 +1084,6 @@ function renderLensDetails(lens) {
   appendIf(fragment, createEditorialSection("History", lens.seriesHistory));
   appendIf(fragment, createRehousingSection(lens));
   appendIf(fragment, createKnownUseSection(lens.famousUses));
-  appendIf(fragment, createYoutubeSection(lens.youtubeEmbeds));
   appendIf(fragment, createRelatedSection(lens));
   appendIf(fragment, createSourcesAndNotesSection(lens));
   fragment.append(createCorrectionFeedbackSection(lens));
@@ -1737,29 +1737,34 @@ function formatSpecNotes(spec) {
 }
 
 function createYoutubeSection(urls) {
-  const samples = normalizeYouTubeSamples(urls).map(getYouTubeSample).filter(Boolean);
+  const samples = getYouTubeSamples(urls);
   if (!samples.length) return null;
 
   const grid = document.createElement("div");
   grid.className = "youtube-grid";
   samples.forEach((sample, index) => {
-    const card = document.createElement("article");
+    const card = document.createElement("a");
     card.className = "youtube-card";
+    card.href = sample.url;
+    card.target = "_blank";
+    card.rel = "noopener noreferrer";
+    card.setAttribute("aria-label", sample.label ? `Play ${sample.label}` : `Play sample footage ${index + 1}`);
 
-    const iframe = document.createElement("iframe");
-    iframe.loading = "lazy";
-    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
-    iframe.allowFullscreen = true;
-    iframe.src = sample.embedUrl;
+    const thumb = document.createElement("span");
+    thumb.className = "youtube-thumb";
+    thumb.innerHTML = `
+      <img src="${escapeHtml(sample.thumbnailUrl)}" alt="" loading="lazy">
+      <span class="youtube-play" aria-hidden="true">Play</span>
+    `;
 
-    const link = document.createElement("a");
-    link.className = "youtube-link";
-    link.href = sample.url;
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.textContent = `Open sample ${index + 1}`;
+    card.append(thumb);
+    if (sample.label) {
+      const label = document.createElement("span");
+      label.className = "youtube-label";
+      label.textContent = sample.label;
+      card.append(label);
+    }
 
-    card.append(iframe, link);
     grid.append(card);
   });
 
@@ -2561,19 +2566,30 @@ function splitLines(value) {
 }
 
 function normalizeYouTubeSamples(value) {
+  return getYouTubeSamples(value).map((sample) => sample.url);
+}
+
+function getYouTubeSamples(value) {
   const urls = [];
   const seen = new Set();
-  normalizeArrayField(value, { fieldName: "youtubeEmbeds", separator: "lines" }).forEach((item) => {
+  normalizeArrayField(value, { fieldName: "youtubeEmbeds", separator: "lines", preserveObjects: true }).forEach((item) => {
     const sample = getYouTubeSample(item);
     if (!sample || seen.has(sample.id)) return;
     seen.add(sample.id);
-    urls.push(sample.url);
+    urls.push(sample);
   });
   return urls;
 }
 
 function getYouTubeSample(value) {
-  const raw = cleanArrayItem(value);
+  let source = value;
+  let label = "";
+  if (value && typeof value === "object") {
+    source = value.url || value.href || value.videoId || value.id || value.embedUrl || "";
+    label = safeText(value.label || value.title);
+  }
+
+  const raw = cleanArrayItem(source);
   if (!raw) return null;
 
   const iframeSrc = raw.match(/\bsrc=["']([^"']+)["']/i)?.[1];
@@ -2583,7 +2599,7 @@ function getYouTubeSample(value) {
   }
 
   const plainId = text.match(/^[A-Za-z0-9_-]{11}$/)?.[0];
-  if (plainId) return buildYouTubeSample(plainId);
+  if (plainId) return buildYouTubeSample(plainId, label);
 
   try {
     const url = new URL(text);
@@ -2601,11 +2617,11 @@ function getYouTubeSample(value) {
     }
 
     id = normalizeYouTubeId(id);
-    return id ? buildYouTubeSample(id) : null;
+    return id ? buildYouTubeSample(id, label) : null;
   } catch (_error) {
     const embeddedId = text.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{6,})/i)?.[1];
     const id = normalizeYouTubeId(embeddedId);
-    return id ? buildYouTubeSample(id) : null;
+    return id ? buildYouTubeSample(id, label) : null;
   }
 }
 
@@ -2613,11 +2629,13 @@ function normalizeYouTubeId(value) {
   return safeText(value).split(/[?&#/]/)[0].replace(/[^A-Za-z0-9_-]/g, "");
 }
 
-function buildYouTubeSample(id) {
+function buildYouTubeSample(id, label = "") {
   return {
     id,
+    label,
     url: `https://www.youtube.com/watch?v=${id}`,
-    embedUrl: `https://www.youtube.com/embed/${id}`
+    embedUrl: `https://www.youtube.com/embed/${id}`,
+    thumbnailUrl: `https://img.youtube.com/vi/${id}/hqdefault.jpg`
   };
 }
 

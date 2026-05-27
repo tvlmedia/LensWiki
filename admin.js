@@ -1250,7 +1250,7 @@
   function normalizeYouTubeSamples(value) {
     const urls = [];
     const seen = new Set();
-    normalizeArrayField(value, { fieldName: "youtubeEmbeds", separator: "lines" }).forEach((item) => {
+    normalizeArrayField(value, { fieldName: "youtubeEmbeds", separator: "lines", preserveObjects: true }).forEach((item) => {
       const sample = getYouTubeSample(item);
       if (!sample || seen.has(sample.id)) return;
       seen.add(sample.id);
@@ -1260,7 +1260,12 @@
   }
 
   function getYouTubeSample(value) {
-    const raw = cleanArrayItem(value);
+    let source = value;
+    if (value && typeof value === "object") {
+      source = value.url || value.href || value.videoId || value.id || value.embedUrl || "";
+    }
+
+    const raw = cleanArrayItem(source);
     if (!raw) return null;
 
     const iframeSrc = raw.match(/\bsrc=["']([^"']+)["']/i)?.[1];
