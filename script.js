@@ -1211,7 +1211,8 @@ function handleDrawerSubmit(event) {
 
   if (!event.target.matches("#lensEditForm")) return;
   event.preventDefault();
-  saveLensEdits(event.target).catch(() => {
+  saveLensEdits(event.target).catch((error) => {
+    console.error("LensWiki: unexpected save error.", error);
     state.drawerMessage = { tone: "error", text: "Could not save lens. Please try again." };
     rerenderActiveLens();
   });
@@ -1718,7 +1719,7 @@ function renderLensEditForm(lens) {
       <p class="eyebrow">Update lens</p>
       <h2 id="drawerTitle">${escapeHtml(draft.values.name || lens.name)}</h2>
       <div class="admin-lens-actions">
-        <button class="primary-button small" type="submit" ${draftValidation.blocking.length ? "disabled" : ""}>Save changes</button>
+        <button class="primary-button small" type="submit">Save changes</button>
         <button class="secondary-button small" type="button" data-drawer-action="add-new-lens">Add New Lens</button>
         <button class="secondary-button small" type="button" data-drawer-action="copy-json">Copy JSON</button>
         <button class="secondary-button small" type="button" data-drawer-action="paste-json">Paste JSON</button>
@@ -1981,7 +1982,26 @@ function renderLensNestedValidation(validation) {
 
 async function saveLensEdits(form) {
   const lens = getActiveLens();
-  if (!lens || !state.editDraft || !state.admin.isAdmin || !state.admin.client) return;
+  if (!lens) {
+    state.drawerMessage = { tone: "error", text: "No active lens selected." };
+    rerenderActiveLens();
+    return;
+  }
+  if (!state.editDraft) {
+    state.drawerMessage = { tone: "error", text: "No edit draft is open." };
+    rerenderActiveLens();
+    return;
+  }
+  if (!state.admin.isAdmin) {
+    state.drawerMessage = { tone: "error", text: "Not signed in as admin." };
+    rerenderActiveLens();
+    return;
+  }
+  if (!state.admin.client) {
+    state.drawerMessage = { tone: "error", text: "Supabase client not initialized." };
+    rerenderActiveLens();
+    return;
+  }
 
   const updatedLens = buildUpdatedLensFromDraft(lens, state.editDraft);
   const validation = validateLensNestedData(updatedLens);
@@ -1996,6 +2016,7 @@ async function saveLensEdits(form) {
     submitButton.disabled = true;
     submitButton.textContent = "Saving...";
   }
+  state.drawerMessage = { tone: "success", text: "Saving..." };
 
   const saveResult = await saveLensToSupabase(updatedLens);
 
@@ -2093,10 +2114,22 @@ function removeManualCopyFallback(root) {
 }
 
 async function saveLensToSupabase(lens) {
+  if (!state.admin.client) {
+    return {
+      data: null,
+      error: new Error("Supabase client not initialized."),
+      message: "Supabase client not initialized."
+    };
+  }
+
   const userResult = await safeSupabaseCall(() => state.admin.client.auth.getUser());
   const userId = userResult.data?.user?.id;
   if (userResult.error || !userId) {
-    return { data: null, error: userResult.error || new Error("Admin session unavailable") };
+    return {
+      data: null,
+      error: userResult.error || new Error("Admin session unavailable"),
+      message: userResult.error?.message || "Not signed in as admin."
+    };
   }
 
   const status = getPublishStatusForSave(lens.status);
@@ -2128,7 +2161,13 @@ async function saveLensToSupabase(lens) {
       .select("id")
       .single()
   );
-  if (result.error) return { ...result, lens: storedLens };
+  if (result.error) {
+    return {
+      ...result,
+      lens: storedLens,
+      message: result.error.message || "Supabase upsert failed."
+    };
+  }
 
   const readback = await safeSupabaseCall(() =>
     state.admin.client
@@ -2141,11 +2180,19 @@ async function saveLensToSupabase(lens) {
     return {
       ...readback,
       lens: storedLens,
-      message: "Saved, but Supabase readback verification failed."
+      message: readback.error.message || "Saved, but Supabase readback verification failed."
     };
   }
 
   const readbackLens = lensFromSupabaseRecord(readback.data);
+  if (!readbackLens) {
+    return {
+      data: readback.data,
+      error: new Error("Saved row could not be verified in Supabase."),
+      lens: storedLens,
+      message: "Saved row could not be verified in Supabase."
+    };
+  }
   const readbackData = readback.data?.data && typeof readback.data.data === "object" ? readback.data.data : {};
   const readbackValidation = validateLensNestedData(readbackData, {
     requireFocalLengthSpecs: hasValue(storedLens.focalLengthSpecs)
@@ -2154,12 +2201,12 @@ async function saveLensToSupabase(lens) {
     return {
       data: readback.data,
       error: new Error(readbackValidation.blocking.join(" ")),
-      lens: readbackLens || storedLens,
+      lens: readbackLens,
       message: readbackValidation.blocking.join(" ")
     };
   }
 
-  return { data: readback.data, error: null, lens: readbackLens || storedLens };
+  return { data: readback.data, error: null, lens: readbackLens };
 }
 
 function getPublishStatusForSave(status) {
