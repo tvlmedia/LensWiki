@@ -869,6 +869,12 @@ function handleDrawerAction(event) {
     startLensEdit(lens);
   }
 
+  if (action.dataset.drawerAction === "copy-json") {
+    copyActiveLensJson(action).catch(() => {
+      showInlineCopyStatus(els.drawerContent, "Clipboard blocked. Copy manually.", "error");
+    });
+  }
+
   if (action.dataset.drawerAction === "cancel-edit") {
     if (hasDirtyPublicDraft() && !confirm("Discard unsaved changes?")) return;
     if (hasDirtyPublicDraft()) clearCurrentPublicDraft();
@@ -948,6 +954,8 @@ function renderLensDetails(lens) {
     ${state.admin.isAdmin ? `
       <div class="admin-lens-actions">
         <button class="secondary-button small" type="button" data-drawer-action="edit-lens">Update lens</button>
+        <button class="ghost-button small" type="button" data-drawer-action="copy-json">Copy JSON</button>
+        <span class="copy-status" data-copy-status hidden></span>
       </div>
     ` : ""}
   `;
@@ -999,7 +1007,9 @@ function renderLensEditForm(lens) {
       <h2 id="drawerTitle">${escapeHtml(draft.values.name || lens.name)}</h2>
       <div class="admin-lens-actions">
         <button class="primary-button small" type="submit">Save changes</button>
+        <button class="secondary-button small" type="button" data-drawer-action="copy-json">Copy JSON</button>
         <button class="ghost-button small" type="button" data-drawer-action="cancel-edit">Cancel</button>
+        <span class="copy-status" data-copy-status hidden></span>
       </div>
       <p class="edit-dirty-status" data-draft-status ${draft.dirty ? "" : "hidden"}>Unsaved changes</p>
     </header>
@@ -1102,6 +1112,81 @@ async function saveLensEdits(form) {
   state.drawerMessage = { tone: "success", text: "Lens updated." };
   renderAll();
   rerenderActiveLens();
+}
+
+async function copyActiveLensJson(actionElement) {
+  if (!state.admin.isAdmin) return;
+  const lens = getActiveLens();
+  if (!lens) return;
+
+  const payload = state.editDraft && state.editingLensId === lens.id
+    ? buildUpdatedLensFromDraft(lens, state.editDraft)
+    : getCopyableLens(lens);
+  const root = actionElement.closest("form") || els.drawerContent;
+  await copyJsonPayload(payload, root);
+}
+
+function getCopyableLens(lens) {
+  return toExportLens(lens);
+}
+
+async function copyJsonPayload(payload, root) {
+  const json = JSON.stringify(payload, null, 2);
+  try {
+    if (!navigator.clipboard?.writeText) {
+      throw new Error("Clipboard unavailable");
+    }
+    await navigator.clipboard.writeText(json);
+    removeManualCopyFallback(root);
+    showInlineCopyStatus(root, "JSON copied.");
+  } catch (_error) {
+    showManualCopyFallback(json, root);
+    showInlineCopyStatus(root, "Clipboard blocked. Copy manually.", "error");
+  }
+}
+
+function showInlineCopyStatus(root, message, tone = "success") {
+  const status = root.querySelector("[data-copy-status]") || els.drawerContent.querySelector("[data-copy-status]");
+  if (!status) return;
+
+  status.hidden = false;
+  status.textContent = message;
+  status.dataset.tone = tone;
+  window.clearTimeout(Number(status.dataset.timeoutId || 0));
+  status.dataset.timeoutId = String(window.setTimeout(() => {
+    status.hidden = true;
+    status.textContent = "";
+    delete status.dataset.tone;
+    delete status.dataset.timeoutId;
+  }, 3200));
+}
+
+function showManualCopyFallback(json, root) {
+  removeManualCopyFallback(root);
+  const fallback = document.createElement("div");
+  fallback.className = "json-copy-fallback";
+  fallback.dataset.jsonCopyFallback = "true";
+  fallback.innerHTML = `
+    <label>
+      Copy manually
+      <textarea readonly rows="8">${escapeHtml(json)}</textarea>
+    </label>
+  `;
+
+  const anchor = root.querySelector(".drawer-title") || root.firstElementChild;
+  if (anchor) {
+    anchor.after(fallback);
+  } else {
+    root.prepend(fallback);
+  }
+
+  const textarea = fallback.querySelector("textarea");
+  textarea.focus();
+  textarea.select();
+}
+
+function removeManualCopyFallback(root) {
+  root.querySelectorAll("[data-json-copy-fallback]").forEach((fallback) => fallback.remove());
 }
 
 async function saveLensToSupabase(lens) {

@@ -36,6 +36,9 @@
     accessTitle: document.querySelector("#accessTitle"),
     adminView: document.querySelector("#adminView"),
     configNotice: document.querySelector("#configNotice"),
+    copyAllJsonButton: document.querySelector("#copyAllJsonButton"),
+    copyFallback: document.querySelector("#adminCopyFallback"),
+    copyTextarea: document.querySelector("#adminCopyTextarea"),
     dashboard: document.querySelector("#adminDashboard"),
     dashboardStatus: document.querySelector("#dashboardStatus"),
     emailInput: document.querySelector("#emailInput"),
@@ -118,6 +121,7 @@
     els.loginForm.addEventListener("submit", handleLogin);
     els.logoutButton.addEventListener("click", handleLogout);
     els.recordsList.addEventListener("click", handleRecordListClick);
+    els.copyAllJsonButton.addEventListener("click", copyAllLensJson);
     els.newLensButton.addEventListener("click", () => openLensEditor(createEmptyLens(), "new"));
     els.importButton.addEventListener("click", openImportPanel);
     els.editorPanel.addEventListener("submit", handleEditorSubmit);
@@ -242,7 +246,7 @@
         <span>Maker</span>
         <span>Year</span>
         <span>Status</span>
-        <span>Action</span>
+        <span>Actions</span>
       </div>
       ${state.records.map(renderRecordRow).join("")}
     `;
@@ -258,12 +262,22 @@
         <span>${escapeHtml(lens.manufacturer || "-")}</span>
         <span>${escapeHtml(lens.yearIntroduced || "-")}</span>
         <span>${escapeHtml([status, confidence].filter(Boolean).join(" / "))}</span>
-        <span><button class="secondary-button mini" type="button" data-edit-record="${escapeHtml(record.id)}">Edit</button></span>
+        <span class="row-actions">
+          <button class="secondary-button mini" type="button" data-edit-record="${escapeHtml(record.id)}">Edit</button>
+          <button class="secondary-button mini" type="button" data-copy-record="${escapeHtml(record.id)}">Copy JSON</button>
+        </span>
       </div>
     `;
   }
 
   function handleRecordListClick(event) {
+    const copyButton = event.target.closest("[data-copy-record]");
+    if (copyButton) {
+      const record = state.records.find((item) => item.id === copyButton.dataset.copyRecord);
+      if (record) copyJsonPayload(lensFromRecord(record));
+      return;
+    }
+
     const editButton = event.target.closest("[data-edit-record]");
     if (!editButton) return;
     const record = state.records.find((item) => item.id === editButton.dataset.editRecord);
@@ -314,6 +328,7 @@
           </div>
           <div class="panel-actions">
             <button class="primary-button" type="submit">${draft.mode === "new" ? "Create lens" : "Save changes"}</button>
+            <button class="secondary-button" type="button" data-editor-action="copy-json">Copy JSON</button>
             <button class="secondary-button" type="button" data-editor-action="cancel">Cancel</button>
           </div>
         </div>
@@ -374,6 +389,12 @@
   }
 
   function handleEditorClick(event) {
+    if (event.target.closest('[data-editor-action="copy-json"]')) {
+      if (state.editorDraft) {
+        copyJsonPayload(buildLensFromDraft(state.editorDraft));
+      }
+    }
+
     if (event.target.closest('[data-editor-action="cancel"]')) {
       if (hasDirtyEditorDraft() && !confirm("Discard unsaved changes?")) return;
       clearCurrentEditorDraft();
@@ -562,6 +583,48 @@
     els.importRunButton.disabled = true;
     state.importRecords = [];
     await loadAdminDashboard();
+  }
+
+  function copyAllLensJson() {
+    if (!state.isAdmin) return;
+    copyJsonPayload(state.records.map(lensFromRecord));
+  }
+
+  async function copyJsonPayload(payload) {
+    const json = JSON.stringify(payload, null, 2);
+    try {
+      if (!navigator.clipboard?.writeText) {
+        throw new Error("Clipboard unavailable");
+      }
+      await navigator.clipboard.writeText(json);
+      hideCopyFallback();
+      showTemporaryStatus("JSON copied.", "success");
+    } catch (_error) {
+      showCopyFallback(json);
+      showTemporaryStatus("Clipboard blocked. Copy manually.", "error");
+    }
+  }
+
+  function showCopyFallback(json) {
+    els.copyFallback.hidden = false;
+    els.copyTextarea.value = json;
+    els.copyTextarea.focus();
+    els.copyTextarea.select();
+  }
+
+  function hideCopyFallback() {
+    els.copyFallback.hidden = true;
+    els.copyTextarea.value = "";
+  }
+
+  function showTemporaryStatus(message, tone = "info") {
+    showStatus(message, tone);
+    window.clearTimeout(Number(els.statusMessage.dataset.timeoutId || 0));
+    els.statusMessage.dataset.timeoutId = String(window.setTimeout(() => {
+      if (els.statusMessage.textContent === message) {
+        clearStatus();
+      }
+    }, 3200));
   }
 
   function parseImportPayload(text) {

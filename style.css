@@ -1183,8 +1183,18 @@ button.dense-row:hover {
 .admin-lens-actions {
   margin-top: 14px;
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.copy-status {
+  color: #d9fff0;
+  font-size: 0.84rem;
+}
+
+.copy-status[data-tone="error"] {
+  color: #ffe0e6;
 }
 
 .drawer-message {
@@ -1225,6 +1235,34 @@ button.dense-row:hover {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.json-copy-fallback {
+  clear: both;
+  margin: 0 52px 16px 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.json-copy-fallback label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.json-copy-fallback textarea {
+  width: 100%;
+  min-height: 180px;
+  padding: 10px;
+  color: var(--ink);
+  background: #090b0f;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font: 0.82rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .confidence {

@@ -6,7 +6,7 @@
     <title>LensWiki Admin</title>
     <meta name="robots" content="noindex">
     <!-- Bump admin asset version after changing admin JS/config. -->
-    <link rel="stylesheet" href="admin.css?v=20260527-7">
+    <link rel="stylesheet" href="admin.css?v=20260527-8">
   </head>
   <body>
     <header class="admin-topbar">
@@ -55,7 +55,10 @@
                 <p class="access-kicker">Dashboard</p>
                 <h2>Lens records</h2>
               </div>
-              <strong id="supabaseRecordCount">Loading...</strong>
+              <div class="dashboard-head-actions">
+                <button class="secondary-button mini" id="copyAllJsonButton" type="button">Copy all JSON</button>
+                <strong id="supabaseRecordCount">Loading...</strong>
+              </div>
             </div>
 
             <p class="dashboard-status" id="dashboardStatus">Loading lens records...</p>
@@ -96,6 +99,12 @@
             </section>
 
             <div class="records-table" id="supabaseRecordsList" hidden></div>
+            <section class="copy-fallback" id="adminCopyFallback" hidden>
+              <label>
+                Copy manually
+                <textarea id="adminCopyTextarea" readonly rows="8"></textarea>
+              </label>
+            </section>
           </section>
 
           <div class="dashboard-footer">
@@ -107,6 +116,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js?v=20260527-6"></script>
-    <script src="admin.js?v=20260527-7" defer></script>
+    <script src="admin.js?v=20260527-8" defer></script>
   </body>
 </html>
