@@ -2882,7 +2882,7 @@ function getYouTubeSample(value) {
   const iframeSrc = raw.match(/\bsrc=["']([^"']+)["']/i)?.[1];
   let text = normalizeMediaUrl(iframeSrc || raw);
   const id = extractYouTubeId(text);
-  if (id) return buildYouTubeSample(id, { label, platform, thumbnailUrl });
+  if (id) return buildYouTubeSample(id, { label, platform, thumbnailUrl, url: text });
   if (thumbnailUrl) return buildVideoSample(text, { label, platform, thumbnailUrl });
   return null;
 }
@@ -2947,7 +2947,7 @@ function buildYouTubeSample(id, options = {}) {
     id,
     label: options.label || "",
     platform,
-    url: `https://www.youtube.com/watch?v=${id}`,
+    url: options.url || `https://www.youtube.com/watch?v=${id}`,
     embedUrl: `https://www.youtube.com/embed/${id}`,
     thumbnailUrl: thumbnailUrls[0],
     thumbnailFallbackUrls: thumbnailUrls.slice(1)

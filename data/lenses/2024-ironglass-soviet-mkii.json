@@ -50,6 +50,43 @@
   "closeFocus": [
     "Improved close focus compared with original stills mechanics; exact values vary by focal length, donor and rehousing batch. Verify copy-specific values before publication."
   ],
+  "sampleFootage": [
+    {
+      "title": "IronGlass Soviet MKII sample footage 01",
+      "platform": "YouTube",
+      "videoId": "fFdSy4aPm68",
+      "url": "https://youtu.be/fFdSy4aPm68?list=PLt8waxzgfUL05S_hwuMBmJ0MgFiVHrjO2",
+      "thumbnailUrl": "https://i.ytimg.com/vi/fFdSy4aPm68/hqdefault.jpg"
+    },
+    {
+      "title": "IronGlass Soviet MKII sample footage 02",
+      "platform": "YouTube",
+      "videoId": "rH9oslWf4wk",
+      "url": "https://youtu.be/rH9oslWf4wk?list=PLt8waxzgfUL05S_hwuMBmJ0MgFiVHrjO2",
+      "thumbnailUrl": "https://i.ytimg.com/vi/rH9oslWf4wk/hqdefault.jpg"
+    },
+    {
+      "title": "IronGlass Soviet MKII sample footage 03",
+      "platform": "YouTube",
+      "videoId": "OGnSOPXaj9M",
+      "url": "https://youtu.be/OGnSOPXaj9M",
+      "thumbnailUrl": "https://i.ytimg.com/vi/OGnSOPXaj9M/hqdefault.jpg"
+    },
+    {
+      "title": "IronGlass Soviet MKII sample footage 04",
+      "platform": "YouTube",
+      "videoId": "UnMQYW2s5dY",
+      "url": "https://youtu.be/UnMQYW2s5dY?list=PLIk-Oc_omvxraXW33fcxaqwPV9Of4wyWb",
+      "thumbnailUrl": "https://i.ytimg.com/vi/UnMQYW2s5dY/hqdefault.jpg"
+    },
+    {
+      "title": "IronGlass Soviet MKII sample footage 05",
+      "platform": "YouTube",
+      "videoId": "y6-eFOaopYo",
+      "url": "https://youtu.be/y6-eFOaopYo?list=PLt8waxzgfUL05S_hwuMBmJ0MgFiVHrjO2",
+      "thumbnailUrl": "https://i.ytimg.com/vi/y6-eFOaopYo/hqdefault.jpg"
+    }
+  ],
   "focalLengthSpecs": [
     {
       "lens": "Zenitar 16",
