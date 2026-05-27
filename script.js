@@ -46,6 +46,12 @@ const NORMALIZED_ARRAY_FIELDS = new Set([
   "famousUses",
   "focalLengthSpecs"
 ]);
+const FOCAL_LENGTH_SPECS_FIELDS = [
+  "focalLengthSpecs",
+  "focalLengthData",
+  "focalLengthsData",
+  "focalLengthTable"
+];
 const VIDEO_SAMPLE_FIELDS = [
   "sampleFootage",
   "sampleVideos",
@@ -651,7 +657,7 @@ function normalizeLens(lens, fileName) {
     focalLengths: normalizeArrayField(lens.focalLengths, getArrayFieldOptions("focalLengths")),
     tStops: normalizeArrayField(lens.tStops, getArrayFieldOptions("tStops")),
     closeFocus: normalizeArrayField(lens.closeFocus, getArrayFieldOptions("closeFocus")),
-    focalLengthSpecs: normalizeArrayField(lens.focalLengthSpecs, { fieldName: "focalLengthSpecs", preserveObjects: true }),
+    focalLengthSpecs: normalizeFocalLengthSpecs(lens),
     opticalFormula: safeText(lens.opticalFormula),
     elements: numberOrNull(lens.elements),
     groups: numberOrNull(lens.groups),
@@ -685,6 +691,17 @@ function normalizeLens(lens, fileName) {
     sourceFile: fileName,
     searchText: JSON.stringify(lens).toLowerCase()
   };
+}
+
+function normalizeFocalLengthSpecs(lens) {
+  const values = FOCAL_LENGTH_SPECS_FIELDS.map((fieldName) => lens[fieldName]).filter(hasValue);
+  const value = values.find((candidate) => hasObjectRows(normalizeArrayField(candidate, { fieldName: "focalLengthSpecs", preserveObjects: true })))
+    || values[0];
+  return normalizeArrayField(value, { fieldName: "focalLengthSpecs", preserveObjects: true });
+}
+
+function hasObjectRows(value) {
+  return Array.isArray(value) && value.some((item) => item && typeof item === "object" && !Array.isArray(item));
 }
 
 function renderAll() {
@@ -1124,7 +1141,8 @@ function createPublicEditDraft(lens) {
 function renderLensDetails(lens) {
   const fragment = document.createDocumentFragment();
   const mountLabels = cleanMountsForDisplay(lens.mounts);
-  const hasFocalLengthSpecs = hasValue(lens.focalLengthSpecs);
+  const focalLengthSpecs = normalizeFocalLengthSpecs(lens);
+  const hasFocalLengthSpecs = hasObjectRows(focalLengthSpecs);
   appendIf(fragment, createDrawerMessage());
   const header = document.createElement("header");
   header.className = "drawer-title";
@@ -1165,7 +1183,7 @@ function renderLensDetails(lens) {
   appendIf(fragment, createCineFlaresSection(lens));
   appendIf(fragment, createYoutubeSection(lens));
   appendIf(fragment, createDetailSection("Key specs", createFieldGrid(factFields)));
-  appendIf(fragment, createFocalLengthSpecsSection(lens.focalLengthSpecs));
+  appendIf(fragment, createFocalLengthSpecsSection(focalLengthSpecs));
   appendIf(fragment, createListSection("Character", lens.characteristics));
   appendIf(fragment, createListSection("Strengths", lens.strengths));
   appendIf(fragment, createListSection("Weaknesses", lens.weaknesses));
@@ -1845,6 +1863,12 @@ function getRehousingNotes(lens) {
 
 function createFocalLengthSpecsSection(specs) {
   if (!hasValue(specs)) return null;
+  const rows = specs.filter((spec) => spec && typeof spec === "object" && !Array.isArray(spec));
+  if (!rows.length) {
+    return state.admin.isAdmin
+      ? createDetailSection("Focal length data", createFormatWarning("Focal length data format needs cleanup."))
+      : null;
+  }
 
   const wrapper = document.createElement("div");
   wrapper.className = "spec-table-wrap";
@@ -1869,7 +1893,7 @@ function createFocalLengthSpecsSection(specs) {
   `;
 
   const body = wrapper.querySelector("tbody");
-  specs.forEach((spec) => {
+  rows.forEach((spec) => {
     const row = document.createElement("tr");
     const cells = [
       formatSpecLens(spec),
@@ -1888,7 +1912,7 @@ function createFocalLengthSpecsSection(specs) {
       if (cell && typeof cell === "object" && cell.nodeType) {
         td.append(cell);
       } else {
-        td.textContent = cell;
+        td.textContent = safeText(cell, "—") || "—";
       }
       row.append(td);
     });
@@ -1898,54 +1922,61 @@ function createFocalLengthSpecsSection(specs) {
   return createDetailSection("Focal length data", wrapper);
 }
 
+function createFormatWarning(message) {
+  const warning = document.createElement("p");
+  warning.className = "detail-warning";
+  warning.textContent = message;
+  return warning;
+}
+
 function formatSpecNotes(spec) {
-  return [spec.apertureRange ? `Range: ${spec.apertureRange}` : "", spec.notes || ""].filter(Boolean).join(" · ");
+  return [spec.apertureRange ? `Range: ${spec.apertureRange}` : "", spec.notes || ""].filter(Boolean).join(" · ") || "—";
 }
 
 function formatSpecLens(spec) {
-  return safeText(spec.lens || spec.donorLens || spec.series);
+  return safeText(spec.lens || spec.donorLens || spec.series, "—") || "—";
 }
 
 function formatSpecFocalLength(spec) {
   if (hasValue(spec.focalLengthMm)) return `${formatSpecNumber(spec.focalLengthMm)}mm`;
-  return safeText(spec.focalLength);
+  return safeText(spec.focalLength, "—") || "—";
 }
 
 function formatSpecCloseFocus(spec) {
   if (state.unitSystem === "imperial") {
-    return safeText(spec.closeFocusFt || spec.closeFocusImperial || spec.closeFocus || spec.minimumMarkedObjectDistance);
+    return safeText(spec.closeFocusFt || spec.closeFocusImperial || spec.closeFocus || spec.minimumMarkedObjectDistance, "—") || "—";
   }
   if (hasValue(spec.closeFocusM)) return `${formatSpecNumber(spec.closeFocusM)}m`;
-  return safeText(spec.closeFocus || spec.closeFocusMetric || spec.minimumMarkedObjectDistance);
+  return safeText(spec.closeFocus || spec.closeFocusMetric || spec.minimumMarkedObjectDistance, "—") || "—";
 }
 
 function formatSpecAperture(spec) {
-  return [spec.tStop || spec.maxAperture, spec.fStop].filter(hasValue).join(" / ");
+  return [spec.tStop || spec.maxAperture, spec.fStop].filter(hasValue).join(" / ") || "—";
 }
 
 function formatSpecFrontDiameter(spec) {
   if (hasValue(spec.frontDiameterMm)) return `${formatSpecNumber(spec.frontDiameterMm)}mm`;
-  return safeText(spec.frontDiameter);
+  return safeText(spec.frontDiameter, "—") || "—";
 }
 
 function createSpecFormatCell(spec) {
   const formats = normalizeArrayField(spec.format || spec.coverage);
-  if (!formats.length) return safeText(spec.coverage);
+  if (!formats.length) return safeText(spec.coverage, "—") || "—";
   return createInlineChipList(formats);
 }
 
 function formatSpecMount(spec) {
-  return safeText(spec.mount);
+  return safeText(spec.mount, "—") || "—";
 }
 
 function formatSpecLength(spec) {
   if (hasValue(spec.lengthMm)) return `${formatSpecNumber(spec.lengthMm)}mm`;
-  return safeText(spec.length);
+  return safeText(spec.length, "—") || "—";
 }
 
 function formatSpecWeight(spec) {
   if (hasValue(spec.weightKg)) return `${formatSpecNumber(spec.weightKg)}kg`;
-  return safeText(spec.weight);
+  return safeText(spec.weight, "—") || "—";
 }
 
 function formatSpecNumber(value) {
@@ -2774,6 +2805,16 @@ function prepareDraftPatch(patchObject, currentValues, fields) {
 
 function normalizeLensPatchObject(patchObject) {
   const normalized = { ...patchObject };
+  const fallbackSpecsField = FOCAL_LENGTH_SPECS_FIELDS.find((fieldName) => fieldName !== "focalLengthSpecs" && hasOwn(normalized, fieldName));
+  if (!hasOwn(normalized, "focalLengthSpecs") && fallbackSpecsField) {
+    normalized.focalLengthSpecs = normalized[fallbackSpecsField];
+  }
+  FOCAL_LENGTH_SPECS_FIELDS.forEach((fieldName) => {
+    if (fieldName !== "focalLengthSpecs") {
+      delete normalized[fieldName];
+    }
+  });
+
   if (hasOwn(normalized, "cineflares")) {
     const cineflares = normalizeCineFlares(normalized.cineflares);
     normalized.cineflaresAvailable = cineflares.available;
