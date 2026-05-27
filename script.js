@@ -74,7 +74,8 @@ const REHOUSING_FIELD_KEYS = new Set([
   "donorMount",
   "rehousingCompany",
   "rehousingGeneration",
-  "rehousingNotes"
+  "rehousingNotes",
+  "donorProductionYearsByLens"
 ]);
 const ADMIN_EDIT_FIELDS = [
   { key: "manufacturer", label: "Maker / brand", type: "text" },
@@ -112,6 +113,7 @@ const ADMIN_EDIT_FIELDS = [
   { key: "rehousingCompany", label: "Rehousing company", type: "text" },
   { key: "rehousingGeneration", label: "Rehousing generation", type: "text" },
   { key: "rehousingNotes", label: "Rehousing notes", type: "textarea" },
+  { key: "donorProductionYearsByLens", label: "Donor glass production years", type: "object" },
   { key: "famousUses", label: "Known use", type: "structured" },
   { key: "sampleFootage", label: "Sample footage", type: "structured" },
   { key: "youtubeEmbeds", label: "YouTube sample links", type: "lines" },
@@ -670,6 +672,7 @@ function normalizeLens(lens, fileName) {
     rehousingCompany: safeText(lens.rehousingCompany),
     rehousingGeneration: safeText(lens.rehousingGeneration),
     rehousingNotes: safeText(lens.rehousingNotes),
+    donorProductionYearsByLens: normalizeDonorProductionYearsMap(lens.donorProductionYearsByLens),
     lookSummary: safeText(lens.lookSummary),
     cineflares: normalizeCineFlares(lens.cineflares),
     characteristics: normalizeArrayField(lens.characteristics, getArrayFieldOptions("characteristics")),
@@ -1382,10 +1385,10 @@ function renderEditField(draft, field) {
     `;
   }
 
-  if (field.type === "textarea" || field.type === "lines" || field.type === "structured") {
+  if (field.type === "textarea" || field.type === "lines" || field.type === "structured" || field.type === "object") {
     const rows = field.type === "structured" ? 8 : 4;
     return `
-      <label class="edit-field ${field.type === "textarea" || field.type === "structured" ? "edit-field-wide" : ""}">
+      <label class="edit-field ${field.type === "textarea" || field.type === "structured" || field.type === "object" ? "edit-field-wide" : ""}">
         <span>${escapeHtml(field.label)}</span>
         <textarea name="${escapeHtml(field.key)}" rows="${rows}">${escapeHtml(value)}</textarea>
         ${getEditHint(field)}
@@ -1417,6 +1420,9 @@ function getEditHint(field) {
   }
   if (field.type === "structured") {
     return '<small>Use JSON for structured entries, or one item per line for simple text.</small>';
+  }
+  if (field.type === "object") {
+    return '<small>Use a JSON object, for example { "Lens name": "1967-1992" }.</small>';
   }
   return "";
 }
@@ -1812,6 +1818,7 @@ function createRehousingSection(lens) {
     wrapper.append(donorSection);
   }
 
+  appendIf(wrapper, createDonorGlassProductionYearsSection(lens));
   appendIf(wrapper, createOriginalOpticsYearsSection(lens));
 
   if (shouldShowRehousingInfo(lens)) {
@@ -1834,6 +1841,17 @@ function createRehousingSection(lens) {
   return createDetailSection("Rehousing", wrapper);
 }
 
+function createDonorGlassProductionYearsSection(lens) {
+  const rows = getDonorGlassProductionYearRows(lens);
+  if (!rows.length) return null;
+
+  const section = document.createElement("div");
+  section.className = "rehousing-subsection";
+  section.innerHTML = "<h4>Donor glass production years</h4>";
+  section.append(createDonorYearsTable(rows, "Production years"));
+  return section;
+}
+
 function createOriginalOpticsYearsSection(lens) {
   const rows = getOriginalOpticsYearRows(lens);
   if (!rows.length) return null;
@@ -1841,14 +1859,18 @@ function createOriginalOpticsYearsSection(lens) {
   const section = document.createElement("div");
   section.className = "rehousing-subsection";
   section.innerHTML = "<h4>Original optics years</h4>";
+  section.append(createDonorYearsTable(rows, "Original production years"));
+  return section;
+}
 
+function createDonorYearsTable(rows, yearsHeading) {
   const table = document.createElement("table");
   table.className = "donor-years-table";
   table.innerHTML = `
     <thead>
       <tr>
         <th>Lens / donor</th>
-        <th>Original production years</th>
+        <th>${escapeHtml(yearsHeading)}</th>
       </tr>
     </thead>
     <tbody></tbody>
@@ -1865,8 +1887,16 @@ function createOriginalOpticsYearsSection(lens) {
     body.append(row);
   });
 
-  section.append(table);
-  return section;
+  return table;
+}
+
+function getDonorGlassProductionYearRows(lens) {
+  return Object.entries(normalizeDonorProductionYearsMap(lens.donorProductionYearsByLens))
+    .map(([donorLens, productionYears]) => ({
+      lens: safeText(donorLens),
+      years: safeText(productionYears)
+    }))
+    .filter((row) => row.lens && row.years);
 }
 
 function getOriginalOpticsYearRows(lens) {
@@ -1888,6 +1918,10 @@ function getOriginalOpticsYearRows(lens) {
 
 function hasOriginalOpticsYears(lens) {
   return getOriginalOpticsYearRows(lens).length > 0;
+}
+
+function hasDonorGlassProductionYears(lens) {
+  return getDonorGlassProductionYearRows(lens).length > 0;
 }
 
 function createParagraphBlock(content) {
@@ -2340,6 +2374,12 @@ function toExportLens(lens) {
     _supabaseUpdatedAt,
     ...exportable
   } = lens;
+  const donorProductionYearsByLens = normalizeDonorProductionYearsMap(exportable.donorProductionYearsByLens);
+  if (Object.keys(donorProductionYearsByLens).length) {
+    exportable.donorProductionYearsByLens = donorProductionYearsByLens;
+  } else {
+    delete exportable.donorProductionYearsByLens;
+  }
   return exportable;
 }
 
@@ -2605,10 +2645,11 @@ function shouldShowRehousingSection(lens) {
       || hasValue(lens.rehousingCompany)
       || hasValue(lens.rehousingGeneration)
       || hasValue(lens.rehousingNotes)
+      || hasDonorGlassProductionYears(lens)
       || hasOriginalOpticsYears(lens);
   }
   if (lens._isRehousedExplicit) return false;
-  return (hasValue(lens.donorLens) || hasValue(lens.rehousingInfo) || hasOriginalOpticsYears(lens)) && hasRehousingEvidence(lens);
+  return (hasValue(lens.donorLens) || hasValue(lens.rehousingInfo) || hasDonorGlassProductionYears(lens) || hasOriginalOpticsYears(lens)) && hasRehousingEvidence(lens);
 }
 
 function shouldShowDonorLens(lens) {
@@ -2768,6 +2809,10 @@ function serializeEditValue(value, type, key = "") {
     }
     return items.map(formatListItem).join("\n");
   }
+  if (type === "object") {
+    const normalized = normalizeDonorProductionYearsMap(value);
+    return hasValue(Object.keys(normalized)) ? JSON.stringify(normalized, null, 2) : "";
+  }
   return formatValue(value);
 }
 
@@ -2789,6 +2834,9 @@ function parseEditValue(value, type, key) {
   }
   if (type === "structured") {
     return parseStructuredEditValue(value, key);
+  }
+  if (type === "object") {
+    return parseObjectEditValue(value, key);
   }
   return value;
 }
@@ -2828,6 +2876,20 @@ function prepareDraftPatch(patchObject, currentValues, fields) {
   if (hasOwn(normalizedPatch, "sampleFootage") && !Array.isArray(normalizedPatch.sampleFootage)) {
     return {
       error: "sampleFootage must be a JSON array.",
+      ignored,
+      patchValues,
+      preview
+    };
+  }
+
+  if (
+    hasOwn(normalizedPatch, "donorProductionYearsByLens")
+    && (!normalizedPatch.donorProductionYearsByLens
+      || typeof normalizedPatch.donorProductionYearsByLens !== "object"
+      || Array.isArray(normalizedPatch.donorProductionYearsByLens))
+  ) {
+    return {
+      error: "donorProductionYearsByLens must be a JSON object.",
       ignored,
       patchValues,
       preview
@@ -2904,6 +2966,9 @@ function serializePatchValue(value, field) {
     const items = Array.isArray(value) ? value : [value];
     return JSON.stringify(items, null, 2);
   }
+  if (field.type === "object") {
+    return JSON.stringify(normalizeDonorProductionYearsMap(value), null, 2);
+  }
   if (Array.isArray(value)) return value.map(formatListItem).join(field.type === "lines" ? "\n" : ", ");
   if (value && typeof value === "object") return JSON.stringify(value, null, 2);
   return safeText(value);
@@ -2925,6 +2990,20 @@ function parseStructuredEditValue(value, key) {
     }
     return splitLines(value);
   }
+}
+
+function parseObjectEditValue(value, key) {
+  if (!safeText(value)) return {};
+  try {
+    const parsed = JSON.parse(value);
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+      if (key === "donorProductionYearsByLens") return normalizeDonorProductionYearsMap(parsed);
+      return parsed;
+    }
+  } catch (_error) {
+    // Keep object fields conservative: invalid JSON becomes an empty map.
+  }
+  return {};
 }
 
 function splitCommaList(value) {
@@ -3326,6 +3405,27 @@ function normalizeCineFlares(value) {
     available,
     url: available ? safeText(value.url, "https://lenses.cineflares.com/") : safeText(value.url)
   };
+}
+
+function normalizeDonorProductionYearsMap(value) {
+  let source = value;
+  if (typeof source === "string") {
+    try {
+      source = JSON.parse(source);
+    } catch (_error) {
+      return {};
+    }
+  }
+  if (!source || typeof source !== "object" || Array.isArray(source)) return {};
+
+  return Object.entries(source).reduce((map, [donorLens, productionYears]) => {
+    const lensName = safeText(donorLens);
+    const years = safeText(productionYears);
+    if (lensName && years) {
+      map[lensName] = years;
+    }
+    return map;
+  }, {});
 }
 
 function confidenceClass(confidence) {
