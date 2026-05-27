@@ -8,7 +8,7 @@
       name="description"
       content="A curated archive of cinema lenses, optical history, rehousings, design families, look characteristics and real-world use."
     >
-    <link rel="stylesheet" href="style.css?v=branding-cleanup">
+    <link rel="stylesheet" href="style.css?v=archive-overview">
   </head>
   <body>
     <header class="site-hero" id="top">
@@ -67,16 +67,31 @@
             <input
               id="searchInput"
               type="search"
-              placeholder="Name, maker, country, tag, film, formula..."
+              placeholder="Search lenses, makers, films, looks, optical formulas..."
               autocomplete="off"
             >
+            <div class="quick-explore" aria-label="Explore by">
+              <span>Explore by</span>
+              <div class="quick-chip-row" id="quickChips">
+                <button type="button" data-query="Cooke">Cooke</button>
+                <button type="button" data-query="Zeiss">Zeiss</button>
+                <button type="button" data-query="Panavision">Panavision</button>
+                <button type="button" data-query="Leica">Leica</button>
+                <button type="button" data-query="Soviet">Soviet</button>
+                <button type="button" data-query="Vintage">Vintage</button>
+                <button type="button" data-query="Modern">Modern</button>
+                <button type="button" data-query="Anamorphic">Anamorphic</button>
+                <button type="button" data-query="full-frame capable">Full Frame</button>
+                <button type="button" data-query="S35">S35</button>
+              </div>
+            </div>
           </div>
 
           <div class="timeline-actions">
             <div class="timeline-scale" id="scaleToggle" aria-label="Timeline scale">
-              <button class="scale-button is-active" type="button" data-scale="timeline" aria-pressed="true">Timeline</button>
-              <button class="scale-button" type="button" data-scale="cards" aria-pressed="false">Cards</button>
-              <button class="scale-button" type="button" data-scale="dense" aria-pressed="false">Dense</button>
+              <button class="scale-button" type="button" data-scale="timeline" aria-pressed="false">Timeline</button>
+              <button class="scale-button is-active" type="button" data-scale="cards" aria-pressed="true">Cards</button>
+              <button class="scale-button" type="button" data-scale="dense" aria-pressed="false">Table</button>
             </div>
             <button class="ghost-button clear-filters" id="clearFilters" type="button">Clear filters</button>
           </div>
@@ -151,6 +166,6 @@
       </article>
     </aside>
 
-    <script src="script.js?v=branding-cleanup" defer></script>
+    <script src="script.js?v=archive-overview" defer></script>
   </body>
 </html>

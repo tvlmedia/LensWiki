@@ -26,7 +26,8 @@ const state = {
     tag: "all",
     lineage: "all"
   },
-  mode: "timeline",
+  mode: "cards",
+  activeQuickChip: "",
   loadError: "",
   libraryStatus: {
     discoveredJsonFiles: 0,
@@ -72,6 +73,7 @@ function cacheEls() {
     "tagFilter",
     "lineageFilter",
     "clearFilters",
+    "quickChips",
     "scaleToggle",
     "eraStrip",
     "timelineViewport",
@@ -89,6 +91,7 @@ function cacheEls() {
 function bindEvents() {
   els.searchInput.addEventListener("input", (event) => {
     state.filters.search = event.target.value.trim().toLowerCase();
+    state.activeQuickChip = getMatchingQuickChip(state.filters.search);
     renderArchive();
   });
 
@@ -108,6 +111,18 @@ function bindEvents() {
   });
 
   els.clearFilters.addEventListener("click", clearFilters);
+
+  els.quickChips.addEventListener("click", (event) => {
+    const chip = event.target.closest("[data-query]");
+    if (!chip) return;
+    const query = chip.dataset.query || chip.textContent.trim();
+    const normalizedQuery = normalizeSearchValue(query);
+    const nextValue = state.activeQuickChip === normalizedQuery ? "" : query;
+    els.searchInput.value = nextValue;
+    state.filters.search = normalizeSearchValue(nextValue);
+    state.activeQuickChip = state.filters.search ? normalizedQuery : "";
+    renderArchive();
+  });
 
   els.scaleToggle.addEventListener("click", (event) => {
     const button = event.target.closest("[data-scale]");
@@ -373,6 +388,7 @@ function renderArchive() {
   const lenses = getFilteredLenses();
   renderDataStatus();
   renderModeButtons();
+  renderQuickChips();
   renderEraStrip();
 
   els.resultSummary.textContent = `${lenses.length} ${lenses.length === 1 ? "record" : "records"} shown`;
@@ -427,6 +443,14 @@ function renderModeButtons() {
   });
 }
 
+function renderQuickChips() {
+  els.quickChips.querySelectorAll("[data-query]").forEach((chip) => {
+    const query = normalizeSearchValue(chip.dataset.query || chip.textContent);
+    chip.classList.toggle("is-active", query === state.activeQuickChip);
+    chip.setAttribute("aria-pressed", String(query === state.activeQuickChip));
+  });
+}
+
 function renderEraStrip() {
   els.eraStrip.innerHTML = "";
   els.eraStrip.hidden = !state.lenses.length;
@@ -465,6 +489,7 @@ function clearFilters() {
   });
 
   els.searchInput.value = "";
+  state.activeQuickChip = "";
   [
     els.eraFilter,
     els.manufacturerFilter,
@@ -578,7 +603,9 @@ function createLensCard(lens) {
     ${lens.manufacturer ? `<p class="manufacturer">${escapeHtml(lens.manufacturer)}</p>` : ""}
     ${getCardLabel(lens) ? `<p class="card-label">${escapeHtml(getCardLabel(lens))}</p>` : ""}
     ${getPublicSummary(lens) ? `<p class="look-summary">${escapeHtml(getPublicSummary(lens))}</p>` : ""}
+    ${getCardCoverage(lens) ? `<p class="card-coverage"><span>Format</span>${escapeHtml(getCardCoverage(lens))}</p>` : ""}
     ${lens.characteristics.length ? `<div class="chip-list">${renderTags(lens.characteristics, 3)}</div>` : ""}
+    ${lens.confidence ? `<p class="source-status">Confidence: ${escapeHtml(lens.confidence)}</p>` : ""}
   `;
   card.addEventListener("click", () => openLens(lens.id));
   return card;
@@ -864,7 +891,7 @@ function getFilteredLenses() {
 }
 
 function buildSearchText(lens) {
-  return [
+  const text = [
     lens.searchText,
     lens.id,
     lens.slug,
@@ -898,6 +925,7 @@ function buildSearchText(lens) {
     lens.famousUses,
     lens.sources
   ].flat().filter(Boolean).join(" ").toLowerCase();
+  return `${text} ${text.replace(/[-/]/g, " ")}`;
 }
 
 function groupByDecade(lenses) {
@@ -956,6 +984,12 @@ function getCategory(lens) {
 
 function getCardLabel(lens) {
   return lens.cardLabel || lens.timelineCategory || lens.designFamily || lens.type[0] || "";
+}
+
+function getCardCoverage(lens) {
+  const coverage = safeText(lens.coverage);
+  if (!coverage) return "";
+  return coverage.length > 74 ? `${coverage.slice(0, 71).trim()}...` : coverage;
 }
 
 function formatArchiveMakerLine(lens) {
@@ -1050,6 +1084,17 @@ function safeText(value, fallback = "") {
   if (value === null || value === undefined) return fallback;
   const text = String(value).trim();
   return text || fallback;
+}
+
+function normalizeSearchValue(value) {
+  return safeText(value).toLowerCase();
+}
+
+function getMatchingQuickChip(searchValue) {
+  if (!els.quickChips || !searchValue) return "";
+  const match = Array.from(els.quickChips.querySelectorAll("[data-query]"))
+    .find((chip) => normalizeSearchValue(chip.dataset.query || chip.textContent) === searchValue);
+  return match ? normalizeSearchValue(match.dataset.query || match.textContent) : "";
 }
 
 function uniqueValues(values) {
