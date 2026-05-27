@@ -1243,6 +1243,90 @@ button.dense-row:hover {
   padding: 6px 10px;
 }
 
+.correction-panel {
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.correction-panel details {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.correction-panel summary {
+  list-style: none;
+  padding: 15px 16px;
+  color: var(--ink);
+}
+
+.correction-panel summary::-webkit-details-marker {
+  display: none;
+}
+
+.correction-panel summary strong,
+.correction-panel summary small {
+  display: block;
+}
+
+.correction-panel summary small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.correction-panel details[open] summary {
+  border-bottom: 1px solid var(--line);
+}
+
+.correction-form {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.correction-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.correction-form label span {
+  color: var(--subtle);
+  font-weight: 560;
+}
+
+.correction-form input,
+.correction-form textarea {
+  background: #090b0f;
+}
+
+.review-check {
+  display: flex !important;
+  grid-template-columns: none;
+  align-items: flex-start;
+  gap: 9px !important;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.review-check input {
+  width: auto;
+  margin-top: 2px;
+}
+
+.correction-form .secondary-button {
+  justify-self: start;
+}
+
+.correction-status {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
 .youtube-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));

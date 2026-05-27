@@ -678,6 +678,7 @@ function renderLensDetails(lens) {
   appendIf(fragment, createYoutubeSection(lens.youtubeEmbeds));
   appendIf(fragment, createRelatedSection(lens));
   appendIf(fragment, createSourcesAndNotesSection(lens));
+  fragment.append(createCorrectionFeedbackSection(lens));
 
   return fragment;
 }
@@ -885,6 +886,84 @@ function createSourceLinks(sources) {
   });
 
   return wrapper.children.length ? wrapper : null;
+}
+
+function createCorrectionFeedbackSection(lens) {
+  const section = document.createElement("section");
+  section.className = "correction-panel";
+
+  const details = document.createElement("details");
+  details.innerHTML = `
+    <summary>
+      <span>
+        <strong>Suggest a correction</strong>
+        <small>Found something inaccurate or missing? Send a sourced note.</small>
+      </span>
+    </summary>
+  `;
+
+  const form = document.createElement("form");
+  form.className = "correction-form";
+  form.innerHTML = `
+    <label>
+      Your name/email <span>optional</span>
+      <input name="reporter" type="text" autocomplete="name">
+    </label>
+    <label>
+      What is wrong?
+      <textarea name="issue" rows="4" required></textarea>
+    </label>
+    <label>
+      Suggested correction
+      <textarea name="correction" rows="4" required></textarea>
+    </label>
+    <label>
+      Source/link <span>optional</span>
+      <input name="source" type="text" inputmode="url">
+    </label>
+    <label class="review-check">
+      <input name="review" type="checkbox" required>
+      <span>I understand this will be reviewed before publication.</span>
+    </label>
+    <button class="secondary-button" type="submit">Open email draft</button>
+    <p class="correction-status" aria-live="polite"></p>
+  `;
+
+  form.addEventListener("submit", (event) => {
+    event.preventDefault();
+    const mailto = buildCorrectionMailto(lens, form);
+    form.dataset.lastMailto = mailto;
+    const status = form.querySelector(".correction-status");
+    status.textContent = "Your email app should open with the correction details. Please send the email to submit it.";
+    window.location.href = mailto;
+  });
+
+  details.append(form);
+  section.append(details);
+  return section;
+}
+
+function buildCorrectionMailto(lens, form) {
+  const data = new FormData(form);
+  const subject = `LensWiki correction: ${lens.name}`;
+  const body = [
+    `Lens name: ${lens.name}`,
+    `Lens id: ${lens.id || ""}`,
+    `Page URL: ${window.location.href}`,
+    `Submitted at: ${new Date().toISOString()}`,
+    "",
+    `Reporter contact: ${safeText(data.get("reporter")) || "Not provided"}`,
+    "",
+    "What is wrong:",
+    safeText(data.get("issue")),
+    "",
+    "Suggested correction:",
+    safeText(data.get("correction")),
+    "",
+    `Source/link: ${safeText(data.get("source")) || "Not provided"}`
+  ].join("\n");
+
+  return `mailto:info@tvlmedia.nl?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
 function exportJson() {
