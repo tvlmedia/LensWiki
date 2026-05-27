@@ -131,6 +131,7 @@ const state = {
   },
   mode: "cards",
   activeQuickChip: "",
+  unitSystem: "metric",
   activeLensId: "",
   editingLensId: "",
   editDraft: null,
@@ -161,6 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function init() {
   cacheEls();
+  loadUnitPreference();
   bindEvents();
   initAdminSession().catch(() => {
     state.admin.isAdmin = false;
@@ -188,6 +190,7 @@ function cacheEls() {
     "tagFilter",
     "lineageFilter",
     "clearFilters",
+    "unitToggle",
     "quickChips",
     "scaleToggle",
     "eraStrip",
@@ -237,6 +240,12 @@ function bindEvents() {
   });
 
   els.clearFilters.addEventListener("click", clearFilters);
+
+  els.unitToggle?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-unit]");
+    if (!button) return;
+    setUnitSystem(button.dataset.unit);
+  });
 
   els.quickChips.addEventListener("click", (event) => {
     const chip = event.target.closest("[data-query]");
@@ -292,6 +301,39 @@ function bindEvents() {
     if (!hasDirtyPublicDraft()) return;
     event.preventDefault();
     event.returnValue = "";
+  });
+}
+
+function loadUnitPreference() {
+  try {
+    const stored = window.localStorage.getItem("lenswiki-unit-system");
+    if (stored === "imperial" || stored === "metric") {
+      state.unitSystem = stored;
+    }
+  } catch (_error) {
+    state.unitSystem = "metric";
+  }
+  updateUnitToggle();
+}
+
+function setUnitSystem(unitSystem) {
+  if (!["metric", "imperial"].includes(unitSystem) || state.unitSystem === unitSystem) return;
+  state.unitSystem = unitSystem;
+  try {
+    window.localStorage.setItem("lenswiki-unit-system", unitSystem);
+  } catch (_error) {
+    // Unit preference is optional; the UI still updates for this session.
+  }
+  updateUnitToggle();
+  rerenderActiveLens();
+}
+
+function updateUnitToggle() {
+  if (!els.unitToggle) return;
+  els.unitToggle.querySelectorAll("[data-unit]").forEach((button) => {
+    const active = button.dataset.unit === state.unitSystem;
+    button.classList.toggle("is-active", active);
+    button.setAttribute("aria-pressed", String(active));
   });
 }
 
@@ -1756,11 +1798,15 @@ function createFocalLengthSpecsSection(specs) {
     <table class="spec-table">
       <thead>
         <tr>
+          <th>Lens / donor</th>
           <th>Focal length</th>
-          <th>Series</th>
-          <th>Max aperture</th>
           <th>Close focus</th>
-          <th>Coverage</th>
+          <th>Aperture</th>
+          <th>Front Ø</th>
+          <th>Format</th>
+          <th>Mount</th>
+          <th>Length</th>
+          <th>Weight</th>
           <th>Notes</th>
         </tr>
       </thead>
@@ -1771,14 +1817,27 @@ function createFocalLengthSpecsSection(specs) {
   const body = wrapper.querySelector("tbody");
   specs.forEach((spec) => {
     const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${escapeHtml(spec.focalLength)}</td>
-      <td>${escapeHtml(spec.series)}</td>
-      <td>${escapeHtml(spec.maxAperture)}</td>
-      <td>${escapeHtml(spec.closeFocus || spec.minimumMarkedObjectDistance)}</td>
-      <td>${escapeHtml(spec.coverage)}</td>
-      <td>${escapeHtml(formatSpecNotes(spec))}</td>
-    `;
+    const cells = [
+      formatSpecLens(spec),
+      formatSpecFocalLength(spec),
+      formatSpecCloseFocus(spec),
+      formatSpecAperture(spec),
+      formatSpecFrontDiameter(spec),
+      createSpecFormatCell(spec),
+      formatSpecMount(spec),
+      formatSpecLength(spec),
+      formatSpecWeight(spec),
+      formatSpecNotes(spec)
+    ];
+    cells.forEach((cell) => {
+      const td = document.createElement("td");
+      if (cell && typeof cell === "object" && cell.nodeType) {
+        td.append(cell);
+      } else {
+        td.textContent = cell;
+      }
+      row.append(td);
+    });
     body.append(row);
   });
 
@@ -1786,12 +1845,59 @@ function createFocalLengthSpecsSection(specs) {
 }
 
 function formatSpecNotes(spec) {
-  return [
-    spec.donorLens ? `Donor: ${spec.donorLens}` : "",
-    spec.frontDiameter ? `Front: ${spec.frontDiameter}` : "",
-    spec.apertureRange ? `Range: ${spec.apertureRange}` : "",
-    spec.notes || ""
-  ].filter(Boolean).join(" · ");
+  return [spec.apertureRange ? `Range: ${spec.apertureRange}` : "", spec.notes || ""].filter(Boolean).join(" · ");
+}
+
+function formatSpecLens(spec) {
+  return safeText(spec.lens || spec.donorLens || spec.series);
+}
+
+function formatSpecFocalLength(spec) {
+  if (hasValue(spec.focalLengthMm)) return `${formatSpecNumber(spec.focalLengthMm)}mm`;
+  return safeText(spec.focalLength);
+}
+
+function formatSpecCloseFocus(spec) {
+  if (state.unitSystem === "imperial") {
+    return safeText(spec.closeFocusFt || spec.closeFocusImperial || spec.closeFocus || spec.minimumMarkedObjectDistance);
+  }
+  if (hasValue(spec.closeFocusM)) return `${formatSpecNumber(spec.closeFocusM)}m`;
+  return safeText(spec.closeFocus || spec.closeFocusMetric || spec.minimumMarkedObjectDistance);
+}
+
+function formatSpecAperture(spec) {
+  return [spec.tStop || spec.maxAperture, spec.fStop].filter(hasValue).join(" / ");
+}
+
+function formatSpecFrontDiameter(spec) {
+  if (hasValue(spec.frontDiameterMm)) return `${formatSpecNumber(spec.frontDiameterMm)}mm`;
+  return safeText(spec.frontDiameter);
+}
+
+function createSpecFormatCell(spec) {
+  const formats = normalizeArrayField(spec.format || spec.coverage);
+  if (!formats.length) return safeText(spec.coverage);
+  return createInlineChipList(formats);
+}
+
+function formatSpecMount(spec) {
+  return safeText(spec.mount);
+}
+
+function formatSpecLength(spec) {
+  if (hasValue(spec.lengthMm)) return `${formatSpecNumber(spec.lengthMm)}mm`;
+  return safeText(spec.length);
+}
+
+function formatSpecWeight(spec) {
+  if (hasValue(spec.weightKg)) return `${formatSpecNumber(spec.weightKg)}kg`;
+  return safeText(spec.weight);
+}
+
+function formatSpecNumber(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return safeText(value);
+  return Number.isInteger(number) ? String(number) : String(number).replace(/0+$/g, "").replace(/\.$/g, "");
 }
 
 function createYoutubeSection(lensOrSamples) {

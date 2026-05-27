@@ -52,60 +52,226 @@
   ],
   "focalLengthSpecs": [
     {
-      "focalLength": "20mm",
-      "donorLens": "MIR-20M",
-      "maxAperture": "T3.6",
-      "frontDiameter": "95mm",
-      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
-      "notes": "CVP 7-lens MKII set."
+      "lens": "Zenitar 16",
+      "focalLengthMm": 16,
+      "closeFocusM": 0.19,
+      "closeFocusFt": "7 1/2\"",
+      "tStop": "T2.9",
+      "fStop": "F2.8",
+      "frontDiameterMm": 95,
+      "format": [
+        "S35",
+        "FF",
+        "LF",
+        "VV",
+        "A65"
+      ],
+      "mount": "PL",
+      "lengthMm": 56.6,
+      "weightKg": 0.77,
+      "notes": "Full-frame fisheye with 180-degree field of view; highly distorted artistic perspective."
     },
     {
-      "focalLength": "28mm",
-      "donorLens": "MIR-10A",
-      "maxAperture": "T3.6",
-      "frontDiameter": "95mm",
-      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
-      "notes": ""
+      "lens": "Mir-20M",
+      "focalLengthMm": 20,
+      "closeFocusM": 0.17,
+      "closeFocusFt": "7\"",
+      "tStop": "T3.6",
+      "fStop": "F3.5",
+      "frontDiameterMm": 95,
+      "format": [
+        "S35",
+        "FF",
+        "LF"
+      ],
+      "mount": "PL",
+      "lengthMm": 67,
+      "weightKg": 0.73,
+      "notes": "Widest rectilinear Soviet lens in the lineup; Flektogon-based rendering with deep perspective and soft edge falloff."
     },
     {
-      "focalLength": "37mm",
-      "donorLens": "MIR-1B",
-      "maxAperture": "T2.9",
-      "frontDiameter": "95mm",
-      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
-      "notes": ""
+      "lens": "Mir-47K",
+      "focalLengthMm": 20,
+      "closeFocusM": 0.17,
+      "closeFocusFt": "7\"",
+      "tStop": "T2.7",
+      "fStop": "F2.5",
+      "frontDiameterMm": 95,
+      "format": [
+        "S35",
+        "FF",
+        "LF",
+        "VV"
+      ],
+      "mount": "PL",
+      "lengthMm": 67,
+      "weightKg": 0.73,
+      "notes": "Faster 20mm option with large image circle and stronger modern production usefulness."
     },
     {
-      "focalLength": "50mm",
-      "donorLens": "Helios 77M-4",
-      "maxAperture": "T2.1",
-      "frontDiameter": "95mm",
-      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
-      "notes": "Not present in every Soviet MKII set."
+      "lens": "Mir-10A",
+      "focalLengthMm": 28,
+      "closeFocusM": 0.2,
+      "closeFocusFt": "8\"",
+      "tStop": "T3.6",
+      "fStop": "F3.5",
+      "frontDiameterMm": 95,
+      "format": [
+        "S35",
+        "FF",
+        "LF",
+        "VV"
+      ],
+      "mount": "PL",
+      "lengthMm": 80,
+      "weightKg": 0.93,
+      "notes": "Neutral wide option with subtle contrast, minimal distortion and warm side-light flare."
     },
     {
-      "focalLength": "58mm",
-      "donorLens": "Helios 44-2",
-      "maxAperture": "T2.1",
-      "frontDiameter": "95mm",
-      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
-      "notes": "Signature swirly-bokeh focal length."
+      "lens": "Mir-24M",
+      "focalLengthMm": 35,
+      "closeFocusM": 0.217,
+      "closeFocusFt": "8 1/2\"",
+      "tStop": "T2.2",
+      "fStop": "F2.0",
+      "frontDiameterMm": 95,
+      "format": [
+        "S35",
+        "FF",
+        "LF",
+        "VV",
+        "GFX"
+      ],
+      "mount": "PL",
+      "lengthMm": 78,
+      "weightKg": 0.86,
+      "notes": "Close-focus 35mm with detailed rendering, smooth bokeh and useful low-light speed."
     },
     {
-      "focalLength": "85mm",
-      "donorLens": "Jupiter-9",
-      "maxAperture": "T2.1",
-      "frontDiameter": "95mm",
-      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
-      "notes": "Some rental sets swap this for Helios 40-2 85mm."
+      "lens": "Mir-1V",
+      "focalLengthMm": 37,
+      "closeFocusM": 0.36,
+      "closeFocusFt": "1'3\"",
+      "tStop": "T2.9",
+      "fStop": "F2.8",
+      "frontDiameterMm": 95,
+      "format": [
+        "S35",
+        "FF",
+        "LF",
+        "VV",
+        "GFX",
+        "A65"
+      ],
+      "mount": "PL",
+      "lengthMm": 80,
+      "weightKg": 0.77,
+      "notes": "Flektogon-derived 37mm with improved MKII close focus and strong flare/contrast character."
     },
     {
-      "focalLength": "135mm",
-      "donorLens": "Tair-11A",
-      "maxAperture": "T2.9",
-      "frontDiameter": "95mm",
-      "coverage": "Full-frame/stills-derived; verify exact image circle per copy",
-      "notes": ""
+      "lens": "Helios-77M-4",
+      "focalLengthMm": 50,
+      "closeFocusM": 0.39,
+      "closeFocusFt": "1'3\"",
+      "tStop": "T2.1",
+      "fStop": "F1.8",
+      "frontDiameterMm": 95,
+      "format": [
+        "S35",
+        "FF",
+        "LF",
+        "VV",
+        "GFX",
+        "A65"
+      ],
+      "mount": "PL",
+      "lengthMm": 78,
+      "weightKg": 0.75,
+      "notes": "Sharper, more controlled Biotar-family Helios option with stronger contrast than Helios 44-2."
+    },
+    {
+      "lens": "Helios 44-2",
+      "focalLengthMm": 58,
+      "closeFocusM": 0.46,
+      "closeFocusFt": "1'6\"",
+      "tStop": "T2.1",
+      "fStop": "F2.0",
+      "frontDiameterMm": 95,
+      "format": [
+        "S35",
+        "FF",
+        "LF",
+        "VV",
+        "GFX",
+        "A65"
+      ],
+      "mount": "PL",
+      "lengthMm": 80,
+      "weightKg": 0.75,
+      "notes": "Signature focal length with plasticity, iconic swirl and vintage mechanical flaws removed by the MKII body."
+    },
+    {
+      "lens": "Helios 40-2",
+      "focalLengthMm": 85,
+      "closeFocusM": 0.75,
+      "closeFocusFt": "2'5\"",
+      "tStop": "T1.6",
+      "fStop": "F1.5",
+      "frontDiameterMm": 95,
+      "format": [
+        "S35",
+        "FF",
+        "LF",
+        "VV",
+        "GFX",
+        "A65"
+      ],
+      "mount": "PL",
+      "lengthMm": 101,
+      "weightKg": 1.34,
+      "notes": "Fast cult portrait lens with iconic swirling bokeh, smooth focus falloff and strong portrait character."
+    },
+    {
+      "lens": "Jupiter-9",
+      "focalLengthMm": 85,
+      "closeFocusM": 0.75,
+      "closeFocusFt": "2'6\"",
+      "tStop": "T2.1",
+      "fStop": "F2.0",
+      "frontDiameterMm": 95,
+      "format": [
+        "S35",
+        "FF",
+        "LF",
+        "VV",
+        "GFX",
+        "A65"
+      ],
+      "mount": "PL",
+      "lengthMm": 77,
+      "weightKg": 0.82,
+      "notes": "Sonnar-derived 85mm with smooth, round bokeh and expressive portrait softness."
+    },
+    {
+      "lens": "Tair-11A",
+      "focalLengthMm": 135,
+      "closeFocusM": 1.15,
+      "closeFocusFt": "3'9\"",
+      "tStop": "T2.9",
+      "fStop": "F2.8",
+      "frontDiameterMm": 95,
+      "format": [
+        "S35",
+        "FF",
+        "LF",
+        "VV",
+        "GFX",
+        "A65"
+      ],
+      "mount": "PL",
+      "lengthMm": 119,
+      "weightKg": 1.4,
+      "notes": "Long telephoto option with vintage compression, warm contrast and expressive falloff."
     }
   ],
   "coating": "Vintage Soviet coatings; internal coating options may vary by rehousing/custom order.",

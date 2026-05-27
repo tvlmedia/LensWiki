@@ -8,7 +8,7 @@
       name="description"
       content="A curated archive of cinema lenses, optical history, rehousings, design families, look characteristics and real-world use."
     >
-    <link rel="stylesheet" href="style.css?v=cineflares-data-driven">
+    <link rel="stylesheet" href="style.css?v=ironglass-focal-specs">
   </head>
   <body>
     <header class="site-hero" id="top">
@@ -18,6 +18,11 @@
           <span>LensWiki</span>
         </a>
         <div class="nav-actions">
+          <div class="unit-toggle" id="unitToggle" aria-label="Measurement units">
+            <button type="button" data-unit="metric" aria-pressed="true">Metric</button>
+            <span aria-hidden="true">|</span>
+            <button type="button" data-unit="imperial" aria-pressed="false">Imperial</button>
+          </div>
           <a href="#timeline">Archive</a>
           <a href="#contribute">Contribute</a>
         </div>
@@ -173,6 +178,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="supabase-config.js?v=20260527-6"></script>
-    <script src="script.js?v=youtube-thumbnail-fallbacks" defer></script>
+    <script src="script.js?v=ironglass-focal-specs" defer></script>
   </body>
 </html>

@@ -145,6 +145,27 @@ code {
   font-size: 0.9rem;
 }
 
+.unit-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--subtle);
+  font-size: 0.82rem;
+}
+
+.unit-toggle button {
+  padding: 5px 0;
+  color: var(--muted);
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+.unit-toggle button:hover,
+.unit-toggle button.is-active {
+  color: var(--ink);
+}
+
 .nav-actions a {
   padding: 8px 2px;
   transition: color 160ms ease;
@@ -1562,7 +1583,7 @@ button.dense-row:hover {
 
 .spec-table {
   width: 100%;
-  min-width: 760px;
+  min-width: 1180px;
   border-collapse: collapse;
   color: #d9dee8;
   font-size: 0.86rem;
@@ -1591,6 +1612,15 @@ button.dense-row:hover {
   color: var(--ink);
   font-weight: 760;
   white-space: nowrap;
+}
+
+.spec-table .inline-chip-list {
+  gap: 4px;
+}
+
+.spec-table .tag {
+  padding: 3px 7px;
+  font-size: 0.7rem;
 }
 
 .source-list a,
