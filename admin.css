@@ -94,7 +94,7 @@ input {
 }
 
 .admin-card {
-  width: min(100%, 560px);
+  width: min(100%, 760px);
   padding: clamp(24px, 5vw, 38px);
   border: 1px solid var(--line);
   border-radius: var(--radius);
@@ -143,7 +143,8 @@ code {
 
 .notice,
 .access-card,
-.session-panel {
+.session-panel,
+.admin-dashboard {
   margin-bottom: 16px;
   padding: 13px 14px;
   border: 1px solid var(--line);
@@ -257,6 +258,106 @@ button:disabled {
   color: var(--muted);
 }
 
+.admin-dashboard {
+  margin: 16px 0 0;
+  background: rgba(255, 255, 255, 0.024);
+}
+
+.dashboard-head,
+.records-row {
+  display: grid;
+  gap: 12px;
+}
+
+.dashboard-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  margin-bottom: 14px;
+}
+
+.dashboard-head h2 {
+  margin-bottom: 0;
+}
+
+.dashboard-head strong {
+  padding: 5px 8px;
+  color: #d8ecff;
+  border: 1px solid rgba(47, 156, 255, 0.24);
+  border-radius: var(--radius);
+  background: var(--accent-soft);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.dashboard-status {
+  margin-bottom: 14px;
+  color: var(--muted);
+}
+
+.records-table {
+  overflow: hidden;
+  margin-bottom: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.records-row {
+  grid-template-columns: minmax(160px, 1.35fr) minmax(110px, 0.85fr) minmax(82px, 0.55fr) minmax(92px, 0.7fr);
+  padding: 10px 11px;
+  color: var(--muted);
+  border-top: 1px solid var(--line);
+  font-size: 0.86rem;
+}
+
+.records-row:first-child {
+  border-top: 0;
+}
+
+.records-row span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.records-row span:first-child {
+  color: var(--text);
+  font-weight: 760;
+}
+
+.records-heading {
+  color: var(--subtle);
+  background: rgba(255, 255, 255, 0.035);
+  font-size: 0.74rem;
+  font-weight: 820;
+}
+
+.records-heading span:first-child {
+  color: var(--subtle);
+}
+
+.dashboard-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.dashboard-actions div {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.dashboard-actions button {
+  width: 100%;
+}
+
+.dashboard-actions p {
+  margin: 8px 0 0;
+  color: var(--subtle);
+  font-size: 0.82rem;
+}
+
 @media (max-width: 640px) {
   .admin-topbar {
     align-items: flex-start;
@@ -271,5 +372,11 @@ button:disabled {
   .session-panel {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .dashboard-head,
+  .dashboard-actions,
+  .records-row {
+    grid-template-columns: 1fr;
   }
 }
