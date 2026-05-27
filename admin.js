@@ -1,4 +1,14 @@
 (() => {
+  const NORMALIZED_ARRAY_FIELDS = new Set([
+    "mounts",
+    "focalLengths",
+    "tStops",
+    "characteristics",
+    "strengths",
+    "weaknesses",
+    "closeFocus"
+  ]);
+
   const LENS_FIELDS = [
     { key: "id", label: "Lens ID", type: "text", required: true },
     { key: "slug", label: "Slug", type: "text" },
@@ -21,6 +31,7 @@
     { key: "mounts", label: "Mounts", type: "list" },
     { key: "focalLengths", label: "Focal lengths", type: "list" },
     { key: "tStops", label: "T-stops / F-stops", type: "list" },
+    { key: "closeFocus", label: "Close focus", type: "list" },
     { key: "seriesHistory", label: "History / series history", type: "lines" },
     { key: "strengths", label: "Strengths", type: "lines" },
     { key: "weaknesses", label: "Weaknesses", type: "lines" },
@@ -783,8 +794,8 @@
 
   function serializeField(value, type) {
     if (!hasValue(value)) return "";
-    if (type === "list") return asArray(value).map(formatListItem).join(", ");
-    if (type === "lines") return asArray(value).map(formatListItem).join("\n");
+    if (type === "list") return normalizeArrayField(value).map(formatListItem).join(", ");
+    if (type === "lines") return normalizeArrayField(value).map(formatListItem).join("\n");
     if (type === "structured") {
       const items = asArray(value);
       if (items.some((item) => item && typeof item === "object")) {
@@ -801,6 +812,7 @@
       const number = Number(value);
       return Number.isFinite(number) ? number : "";
     }
+    if (NORMALIZED_ARRAY_FIELDS.has(key)) return normalizeArrayField(value);
     if (type === "list") return splitCommaList(value);
     if (type === "lines") return splitLines(value);
     if (type === "structured") return parseStructuredValue(value, key);
@@ -948,11 +960,68 @@
   }
 
   function splitCommaList(value) {
-    return safeText(value).split(",").map((item) => item.trim()).filter(Boolean);
+    return normalizeArrayField(value);
   }
 
   function splitLines(value) {
-    return safeText(value).split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+    return normalizeArrayField(value, { separator: "lines" });
+  }
+
+  function normalizeArrayField(value, options = {}) {
+    if (Array.isArray(value)) {
+      return value.map(cleanArrayItem).filter(Boolean);
+    }
+
+    const text = safeText(value);
+    if (!text) return [];
+
+    const trimmed = stripWrappingQuotes(text)
+      .replace(/,\s*\]$/g, "]")
+      .trim();
+
+    if (trimmed.startsWith("[")) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          return normalizeArrayField(parsed, options);
+        }
+      } catch (_error) {
+        // Continue with forgiving cleanup for malformed previously saved values.
+      }
+    }
+
+    const unwrapped = trimmed
+      .replace(/^\[+/, "")
+      .replace(/\]+$/, "")
+      .replace(/,\s*$/g, "");
+
+    const separator = options.separator === "lines" ? /\r?\n/ : /,|\r?\n/;
+    return unwrapped
+      .split(separator)
+      .map(cleanArrayItem)
+      .filter(Boolean);
+  }
+
+  function cleanArrayItem(value) {
+    if (value && typeof value === "object") return formatListItem(value);
+    return stripWrappingQuotes(safeText(value)
+      .replace(/^\[+/, "")
+      .replace(/\]+$/, "")
+      .replace(/^\\?["']+/, "")
+      .replace(/\\?["']+$/, "")
+      .replace(/,\s*$/g, "")
+      .trim());
+  }
+
+  function stripWrappingQuotes(value) {
+    let text = safeText(value).trim();
+    while (
+      text.length >= 2
+      && ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'")))
+    ) {
+      text = text.slice(1, -1).trim();
+    }
+    return text.replace(/\\"/g, '"').replace(/\\'/g, "'");
   }
 
   function formatListItem(item) {

@@ -30,6 +30,15 @@ const FORMAT_FILTERS = [
   { value: "full-frame", label: "Full Frame", terms: ["full frame", "full-frame", "ff", "stills-derived", "still lens derived"] },
   { value: "65mm-large-format", label: "65mm / Large Format", terms: ["65mm", "large format", "large-format", "lf", "alexa 65", "vistavision"] }
 ];
+const NORMALIZED_ARRAY_FIELDS = new Set([
+  "mounts",
+  "focalLengths",
+  "tStops",
+  "characteristics",
+  "strengths",
+  "weaknesses",
+  "closeFocus"
+]);
 const ADMIN_EDIT_FIELDS = [
   { key: "manufacturer", label: "Maker / brand", type: "text" },
   { key: "name", label: "Lens name", type: "text" },
@@ -51,6 +60,7 @@ const ADMIN_EDIT_FIELDS = [
   { key: "mounts", label: "Mounts", type: "list" },
   { key: "focalLengths", label: "Focal lengths", type: "list" },
   { key: "tStops", label: "T-stops / F-stops", type: "list" },
+  { key: "closeFocus", label: "Close focus", type: "list" },
   { key: "strengths", label: "Strengths", type: "lines" },
   { key: "weaknesses", label: "Weaknesses", type: "lines" },
   { key: "seriesHistory", label: "History / series history", type: "lines" },
@@ -522,11 +532,11 @@ function normalizeLens(lens, fileName) {
     publicSummary: safeText(lens.publicSummary),
     coverage: safeText(lens.coverage),
     formatCoverageNotes: asArray(lens.formatCoverageNotes),
-    mounts: asArray(lens.mounts),
+    mounts: normalizeArrayField(lens.mounts),
     seriesHistory: asArray(lens.seriesHistory),
-    focalLengths: asArray(lens.focalLengths),
-    tStops: asArray(lens.tStops),
-    closeFocus: asArray(lens.closeFocus),
+    focalLengths: normalizeArrayField(lens.focalLengths),
+    tStops: normalizeArrayField(lens.tStops),
+    closeFocus: normalizeArrayField(lens.closeFocus),
     focalLengthSpecs: asArray(lens.focalLengthSpecs),
     opticalFormula: safeText(lens.opticalFormula),
     elements: numberOrNull(lens.elements),
@@ -536,9 +546,9 @@ function normalizeLens(lens, fileName) {
     donorLens: safeText(lens.donorLens),
     rehousingInfo: safeText(lens.rehousingInfo),
     lookSummary: safeText(lens.lookSummary),
-    characteristics: asArray(lens.characteristics),
-    strengths: asArray(lens.strengths),
-    weaknesses: asArray(lens.weaknesses),
+    characteristics: normalizeArrayField(lens.characteristics),
+    strengths: normalizeArrayField(lens.strengths),
+    weaknesses: normalizeArrayField(lens.weaknesses),
     famousUses: asArray(lens.famousUses),
     youtubeEmbeds: asArray(lens.youtubeEmbeds),
     imageUrls: asArray(lens.imageUrls),
@@ -1910,10 +1920,10 @@ function formatValue(value) {
 function serializeEditValue(value, type) {
   if (!hasValue(value)) return "";
   if (type === "list") {
-    return asArray(value).map(formatListItem).join(", ");
+    return normalizeArrayField(value).map(formatListItem).join(", ");
   }
   if (type === "lines") {
-    return asArray(value).map(formatListItem).join("\n");
+    return normalizeArrayField(value).map(formatListItem).join("\n");
   }
   if (type === "structured") {
     const items = asArray(value);
@@ -1928,6 +1938,9 @@ function serializeEditValue(value, type) {
 function parseEditValue(value, type, key) {
   if (type === "number") {
     return numberOrNull(value);
+  }
+  if (NORMALIZED_ARRAY_FIELDS.has(key)) {
+    return normalizeArrayField(value);
   }
   if (type === "list") {
     return splitCommaList(value);
@@ -1955,11 +1968,68 @@ function parseStructuredEditValue(value, key) {
 }
 
 function splitCommaList(value) {
-  return safeText(value).split(",").map((item) => item.trim()).filter(Boolean);
+  return normalizeArrayField(value);
 }
 
 function splitLines(value) {
-  return safeText(value).split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+  return normalizeArrayField(value, { separator: "lines" });
+}
+
+function normalizeArrayField(value, options = {}) {
+  if (Array.isArray(value)) {
+    return value.map(cleanArrayItem).filter(Boolean);
+  }
+
+  const text = safeText(value);
+  if (!text) return [];
+
+  const trimmed = stripWrappingQuotes(text)
+    .replace(/,\s*\]$/g, "]")
+    .trim();
+
+  if (trimmed.startsWith("[")) {
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (Array.isArray(parsed)) {
+        return normalizeArrayField(parsed, options);
+      }
+    } catch (_error) {
+      // Fall through to forgiving cleanup for previously saved malformed values.
+    }
+  }
+
+  const unwrapped = trimmed
+    .replace(/^\[+/, "")
+    .replace(/\]+$/, "")
+    .replace(/,\s*$/g, "");
+
+  const separator = options.separator === "lines" ? /\r?\n/ : /,|\r?\n/;
+  return unwrapped
+    .split(separator)
+    .map(cleanArrayItem)
+    .filter(Boolean);
+}
+
+function cleanArrayItem(value) {
+  if (value && typeof value === "object") return formatListItem(value);
+  return stripWrappingQuotes(safeText(value)
+    .replace(/^\[+/, "")
+    .replace(/\]+$/, "")
+    .replace(/^\\?["']+/, "")
+    .replace(/\\?["']+$/, "")
+    .replace(/,\s*$/g, "")
+    .trim());
+}
+
+function stripWrappingQuotes(value) {
+  let text = safeText(value).trim();
+  while (
+    text.length >= 2
+    && ((text.startsWith('"') && text.endsWith('"')) || (text.startsWith("'") && text.endsWith("'")))
+  ) {
+    text = text.slice(1, -1).trim();
+  }
+  return text.replace(/\\"/g, '"').replace(/\\'/g, "'");
 }
 
 function formatListItem(item) {
