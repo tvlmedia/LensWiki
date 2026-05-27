@@ -56,6 +56,7 @@ const VIDEO_SAMPLE_FIELDS = [
   "sampleFootage",
   "sampleVideos",
   "youtubeEmbeds",
+  "vimeoEmbeds",
   "videos",
   "media",
   "links",
@@ -2719,49 +2720,30 @@ function formatSpecNumber(value) {
 }
 
 function createYoutubeSection(lensOrSamples) {
-  const samples = getLensVideoSamples(lensOrSamples);
+  const samples = getVideoItems(lensOrSamples);
   if (!samples.length) return null;
 
   const grid = document.createElement("div");
-  grid.className = "youtube-grid";
+  grid.className = "video-grid youtube-grid";
   samples.forEach((sample, index) => {
-    const card = document.createElement("a");
-    card.className = "youtube-card";
-    card.href = sample.url;
-    card.target = "_blank";
-    card.rel = "noopener noreferrer";
-    card.setAttribute("aria-label", sample.label ? `Play ${sample.label}` : `Play sample footage ${index + 1}`);
+    const card = document.createElement("article");
+    card.className = "video-card youtube-card";
+    card.setAttribute("aria-label", sample.label ? `Sample footage: ${sample.label}` : `Sample footage ${index + 1}`);
 
-    const thumb = document.createElement("span");
-    thumb.className = "youtube-thumb";
-    const thumbnailUrls = [sample.thumbnailUrl, ...(sample.thumbnailFallbackUrls || [])].filter(Boolean);
-    if (thumbnailUrls.length) {
-      const image = document.createElement("img");
-      image.src = thumbnailUrls[0];
-      image.alt = "Sample footage thumbnail";
-      image.loading = "lazy";
-      image.dataset.fallbackIndex = "0";
-      image.addEventListener("error", () => {
-        const nextIndex = Number(image.dataset.fallbackIndex || 0) + 1;
-        if (thumbnailUrls[nextIndex]) {
-          image.dataset.fallbackIndex = String(nextIndex);
-          image.src = thumbnailUrls[nextIndex];
-          return;
-        }
-        thumb.classList.add("is-thumbnail-missing");
-        image.remove();
-      });
-      thumb.append(image);
-    } else {
-      thumb.classList.add("is-thumbnail-missing");
-    }
-    const play = document.createElement("span");
-    play.className = "youtube-play";
-    play.setAttribute("aria-hidden", "true");
-    play.textContent = "Play";
-    thumb.append(play);
+    const frameWrap = document.createElement("div");
+    frameWrap.className = "video-frame";
 
-    card.append(thumb);
+    const iframe = document.createElement("iframe");
+    iframe.src = sample.embedUrl;
+    iframe.title = sample.label || `${sample.platform || "Video"} sample footage ${index + 1}`;
+    iframe.loading = "lazy";
+    iframe.referrerPolicy = "strict-origin-when-cross-origin";
+    iframe.allowFullscreen = true;
+    iframe.setAttribute("allowfullscreen", "");
+    iframe.setAttribute("allow", getVideoIframeAllow(sample.platform));
+    frameWrap.append(iframe);
+
+    card.append(frameWrap);
     if (sample.label || sample.platform) {
       const meta = document.createElement("span");
       meta.className = "youtube-meta";
@@ -3756,75 +3738,124 @@ function normalizeYouTubeSamples(value) {
 }
 
 function getLensVideoSamples(value) {
+  return getVideoItems(value);
+}
+
+function getVideoItems(value) {
+  const rawItems = getRawVideoItems(value);
+  const normalized = rawItems.map(normalizeVideoEmbed).filter(Boolean);
+  const seen = new Set();
+
+  return normalized.filter((item) => {
+    if (!item.embedUrl || seen.has(item.embedUrl)) return false;
+    seen.add(item.embedUrl);
+    return true;
+  });
+}
+
+function getRawVideoItems(value) {
   if (!value) return [];
-
   if (Array.isArray(value) || typeof value === "string") {
-    return getYouTubeSamples(value);
+    return normalizeVideoFieldItems(value, "sampleFootage");
   }
-
   if (typeof value !== "object") return [];
 
-  const samples = [];
-  const seen = new Set();
-  VIDEO_SAMPLE_FIELDS.forEach((fieldName) => {
-    getYouTubeSamples(value[fieldName]).forEach((sample) => {
-      const key = sample.id || sample.url;
-      if (!key || seen.has(key)) return;
-      seen.add(key);
-      samples.push(sample);
-    });
-  });
+  if (hasVideoSource(value) && !hasLensVideoFields(value)) {
+    return [value];
+  }
 
-  return samples;
+  return VIDEO_SAMPLE_FIELDS.flatMap((fieldName) => normalizeVideoFieldItems(value[fieldName], fieldName));
+}
+
+function normalizeVideoFieldItems(value, fieldName = "sampleFootage") {
+  if (!hasValue(value)) return [];
+  if (Array.isArray(value)) return value.filter(hasValue);
+  if (typeof value === "object") return [value];
+  return normalizeArrayField(value, { fieldName, separator: "lines", preserveObjects: true });
+}
+
+function hasVideoSource(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  return ["embedUrl", "url", "href", "videoUrl", "link", "watchUrl", "youtubeUrl", "vimeoUrl", "youtubeId", "vimeoId", "videoId", "id"]
+    .some((key) => hasValue(value[key]));
+}
+
+function hasLensVideoFields(value) {
+  return VIDEO_SAMPLE_FIELDS.some((fieldName) => hasValue(value[fieldName]));
 }
 
 function getYouTubeSamples(value) {
-  const urls = [];
-  const seen = new Set();
-  normalizeArrayField(value, { fieldName: "youtubeEmbeds", separator: "lines", preserveObjects: true }).forEach((item) => {
-    const sample = getYouTubeSample(item);
-    const key = sample?.id || sample?.url;
-    if (!sample || !key || seen.has(key)) return;
-    seen.add(key);
-    urls.push(sample);
-  });
-  return urls;
+  return normalizeVideoFieldItems(value, "youtubeEmbeds")
+    .map(normalizeVideoEmbed)
+    .filter((sample) => sample?.platform === "YouTube");
 }
 
 function getYouTubeSample(value) {
-  let source = value;
-  let label = "";
-  let platform = "";
-  let thumbnailUrl = "";
-  if (value && typeof value === "object") {
-    source = value.url
+  const sample = normalizeVideoEmbed(value);
+  return sample?.platform === "YouTube" ? sample : null;
+}
+
+function normalizeVideoEmbed(item) {
+  const metadata = getVideoMetadata(item);
+  const raw = metadata.source;
+  if (!raw) return null;
+
+  const iframeSrc = raw.match(/\bsrc=["']([^"']+)["']/i)?.[1];
+  const text = normalizeMediaUrl(iframeSrc || raw);
+  const youtubeId = getYouTubeId(text);
+  if (youtubeId) {
+    return buildYouTubeSample(youtubeId, {
+      label: metadata.label,
+      platform: metadata.platform,
+      thumbnailUrl: metadata.thumbnailUrl,
+      url: text,
+      start: getStartSeconds(item)
+    });
+  }
+
+  const vimeoId = getVimeoId(text);
+  if (vimeoId) {
+    return buildVimeoSample(vimeoId, {
+      label: metadata.label,
+      platform: metadata.platform,
+      url: text
+    });
+  }
+
+  return null;
+}
+
+function getVideoMetadata(value) {
+  if (!value || typeof value !== "object") {
+    return {
+      source: normalizeMediaUrl(cleanArrayItem(value)),
+      label: "",
+      platform: "",
+      thumbnailUrl: ""
+    };
+  }
+
+  return {
+    source: normalizeMediaUrl(value.embedUrl
+      || value.url
       || value.href
       || value.videoUrl
       || value.link
       || value.watchUrl
-      || value.embedUrl
       || value.youtubeUrl
+      || value.vimeoUrl
       || value.youtubeId
+      || value.vimeoId
       || value.videoId
       || value.id
-      || "";
-    label = safeText(value.label || value.title || value.name);
-    platform = safeText(value.platform || value.source || value.provider);
-    thumbnailUrl = normalizeMediaUrl(value.thumbnailUrl || value.thumbnail || value.imageUrl || value.image || value.poster);
-  }
-
-  const raw = cleanArrayItem(source);
-  if (!raw) return null;
-
-  const iframeSrc = raw.match(/\bsrc=["']([^"']+)["']/i)?.[1];
-  let text = normalizeMediaUrl(iframeSrc || raw);
-  const id = extractYouTubeId(text);
-  if (id) return buildYouTubeSample(id, { label, platform, thumbnailUrl, url: text });
-  if (thumbnailUrl) return buildVideoSample(text, { label, platform, thumbnailUrl });
-  return null;
+      || ""),
+    label: safeText(value.label || value.title || value.name),
+    platform: safeText(value.platform || value.source || value.provider),
+    thumbnailUrl: normalizeMediaUrl(value.thumbnailUrl || value.thumbnail || value.imageUrl || value.image || value.poster)
+  };
 }
 
-function extractYouTubeId(value) {
+function getYouTubeId(value) {
   const text = normalizeMediaUrl(value);
   if (!text) return "";
 
@@ -3854,8 +3885,80 @@ function extractYouTubeId(value) {
   return "";
 }
 
+function extractYouTubeId(value) {
+  return getYouTubeId(value);
+}
+
+function getVimeoId(value) {
+  const text = normalizeMediaUrl(value);
+  if (!text) return "";
+
+  const plainId = text.match(/^\d{6,}$/)?.[0];
+  if (plainId) return plainId;
+
+  try {
+    const url = new URL(text);
+    const host = url.hostname.replace(/^www\./, "");
+    const parts = url.pathname.split("/").filter(Boolean);
+    if (host === "player.vimeo.com" && parts[0] === "video") {
+      return normalizeVimeoId(parts[1] || "");
+    }
+    if (host === "vimeo.com") {
+      return normalizeVimeoId(parts[0] || "");
+    }
+  } catch (_error) {
+    const embeddedId = text.match(/(?:player\.vimeo\.com\/video\/|vimeo\.com\/)(\d+)/i)?.[1];
+    return normalizeVimeoId(embeddedId);
+  }
+
+  return "";
+}
+
 function normalizeYouTubeId(value) {
   return safeText(value).split(/[?&#/]/)[0].replace(/[^A-Za-z0-9_-]/g, "");
+}
+
+function normalizeVimeoId(value) {
+  return safeText(value).split(/[?&#/]/)[0].replace(/\D/g, "");
+}
+
+function getStartSeconds(itemOrUrl) {
+  if (itemOrUrl && typeof itemOrUrl === "object" && hasValue(itemOrUrl.startTimeSeconds)) {
+    return normalizeStartSeconds(itemOrUrl.startTimeSeconds);
+  }
+
+  const urls = itemOrUrl && typeof itemOrUrl === "object"
+    ? [itemOrUrl.embedUrl, itemOrUrl.url, itemOrUrl.href, itemOrUrl.videoUrl, itemOrUrl.link, itemOrUrl.watchUrl]
+    : [itemOrUrl];
+
+  for (const value of urls) {
+    const url = normalizeMediaUrl(value);
+    if (!url) continue;
+    try {
+      const parsed = new URL(url);
+      const raw = parsed.searchParams.get("t") || parsed.searchParams.get("start");
+      const seconds = normalizeStartSeconds(raw);
+      if (seconds) return seconds;
+    } catch (_error) {
+      const raw = safeText(url).match(/[?&#](?:t|start)=([^&#]+)/i)?.[1];
+      const seconds = normalizeStartSeconds(raw);
+      if (seconds) return seconds;
+    }
+  }
+
+  return null;
+}
+
+function normalizeStartSeconds(value) {
+  if (!hasValue(value)) return null;
+  const text = safeText(value).toLowerCase();
+  const simple = Number(text.replace(/s$/, ""));
+  if (Number.isFinite(simple)) return Math.max(0, Math.floor(simple));
+
+  const minutes = Number(text.match(/(\d+)m/)?.[1] || 0);
+  const seconds = Number(text.match(/(\d+)s/)?.[1] || 0);
+  const total = (minutes * 60) + seconds;
+  return total ? total : null;
 }
 
 function normalizeMediaUrl(value) {
@@ -3867,11 +3970,15 @@ function normalizeMediaUrl(value) {
   if (/^(www\.|m\.)?youtube\.com|^youtu\.be|^img\.youtube\.com/i.test(text)) {
     text = `https://${text}`;
   }
+  if (/^(www\.)?vimeo\.com|^player\.vimeo\.com/i.test(text)) {
+    text = `https://${text}`;
+  }
   return text;
 }
 
 function buildYouTubeSample(id, options = {}) {
   const platform = options.platform || "YouTube";
+  const start = normalizeStartSeconds(options.start);
   const generatedThumbnails = [
     `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
     `https://i.ytimg.com/vi/${id}/mqdefault.jpg`
@@ -3885,21 +3992,27 @@ function buildYouTubeSample(id, options = {}) {
     label: options.label || "",
     platform,
     url: options.url || `https://www.youtube.com/watch?v=${id}`,
-    embedUrl: `https://www.youtube.com/embed/${id}`,
+    embedUrl: `https://www.youtube.com/embed/${id}${start ? `?start=${start}` : ""}`,
     thumbnailUrl: thumbnailUrls[0],
     thumbnailFallbackUrls: thumbnailUrls.slice(1)
   };
 }
 
-function buildVideoSample(url, options = {}) {
+function buildVimeoSample(id, options = {}) {
   return {
-    id: url,
+    id,
     label: options.label || "",
-    platform: options.platform || "",
-    url,
-    embedUrl: "",
-    thumbnailUrl: options.thumbnailUrl
+    platform: options.platform || "Vimeo",
+    url: options.url || `https://vimeo.com/${id}`,
+    embedUrl: `https://player.vimeo.com/video/${id}`,
+    thumbnailUrl: ""
   };
+}
+
+function getVideoIframeAllow(platform = "") {
+  return safeText(platform).toLowerCase() === "vimeo"
+    ? "autoplay; fullscreen; picture-in-picture"
+    : "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
 }
 
 function getArrayFieldOptions(fieldName = "", fieldType = "") {
