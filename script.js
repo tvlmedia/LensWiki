@@ -1810,14 +1810,32 @@ function createYoutubeSection(lensOrSamples) {
 
     const thumb = document.createElement("span");
     thumb.className = "youtube-thumb";
-    thumb.innerHTML = `
-      <img src="${escapeHtml(sample.thumbnailUrl)}" alt="" loading="lazy">
-      <span class="youtube-play" aria-hidden="true">Play</span>
-    `;
-    thumb.querySelector("img")?.addEventListener("error", () => {
+    const thumbnailUrls = [sample.thumbnailUrl, ...(sample.thumbnailFallbackUrls || [])].filter(Boolean);
+    if (thumbnailUrls.length) {
+      const image = document.createElement("img");
+      image.src = thumbnailUrls[0];
+      image.alt = "Sample footage thumbnail";
+      image.loading = "lazy";
+      image.dataset.fallbackIndex = "0";
+      image.addEventListener("error", () => {
+        const nextIndex = Number(image.dataset.fallbackIndex || 0) + 1;
+        if (thumbnailUrls[nextIndex]) {
+          image.dataset.fallbackIndex = String(nextIndex);
+          image.src = thumbnailUrls[nextIndex];
+          return;
+        }
+        thumb.classList.add("is-thumbnail-missing");
+        image.remove();
+      });
+      thumb.append(image);
+    } else {
       thumb.classList.add("is-thumbnail-missing");
-      thumb.querySelector("img")?.remove();
-    });
+    }
+    const play = document.createElement("span");
+    play.className = "youtube-play";
+    play.setAttribute("aria-hidden", "true");
+    play.textContent = "Play";
+    thumb.append(play);
 
     card.append(thumb);
     if (sample.label || sample.platform) {
@@ -2716,34 +2734,40 @@ function getYouTubeSample(value) {
 
   const iframeSrc = raw.match(/\bsrc=["']([^"']+)["']/i)?.[1];
   let text = normalizeMediaUrl(iframeSrc || raw);
+  const id = extractYouTubeId(text);
+  if (id) return buildYouTubeSample(id, { label, platform, thumbnailUrl });
+  if (thumbnailUrl) return buildVideoSample(text, { label, platform, thumbnailUrl });
+  return null;
+}
+
+function extractYouTubeId(value) {
+  const text = normalizeMediaUrl(value);
+  if (!text) return "";
 
   const plainId = text.match(/^[A-Za-z0-9_-]{11}$/)?.[0];
-  if (plainId) return buildYouTubeSample(plainId, { label, platform, thumbnailUrl });
+  if (plainId) return plainId;
 
   try {
     const url = new URL(text);
     const host = url.hostname.replace(/^www\./, "").replace(/^m\./, "");
-    let id = "";
+    const parts = url.pathname.split("/").filter(Boolean);
     if (host === "youtu.be") {
-      id = url.pathname.split("/").filter(Boolean)[0] || "";
-    } else if (host === "youtube.com" || host === "youtube-nocookie.com") {
-      const parts = url.pathname.split("/").filter(Boolean);
+      return normalizeYouTubeId(parts[0] || "");
+    }
+    if (host === "youtube.com" || host === "youtube-nocookie.com") {
       if (url.searchParams.has("v")) {
-        id = url.searchParams.get("v") || "";
-      } else if (["embed", "shorts", "live"].includes(parts[0])) {
-        id = parts[1] || "";
+        return normalizeYouTubeId(url.searchParams.get("v") || "");
+      }
+      if (["embed", "shorts", "live"].includes(parts[0])) {
+        return normalizeYouTubeId(parts[1] || "");
       }
     }
-
-    id = normalizeYouTubeId(id);
-    if (id) return buildYouTubeSample(id, { label, platform, thumbnailUrl });
-    if (thumbnailUrl) return buildVideoSample(text, { label, platform, thumbnailUrl });
-    return null;
   } catch (_error) {
-    const embeddedId = text.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{6,})/i)?.[1];
-    const id = normalizeYouTubeId(embeddedId);
-    return id ? buildYouTubeSample(id, { label, platform, thumbnailUrl }) : null;
+    const embeddedId = text.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{11})/i)?.[1];
+    return normalizeYouTubeId(embeddedId);
   }
+
+  return "";
 }
 
 function normalizeYouTubeId(value) {
@@ -2764,13 +2788,22 @@ function normalizeMediaUrl(value) {
 
 function buildYouTubeSample(id, options = {}) {
   const platform = options.platform || "YouTube";
+  const generatedThumbnails = [
+    `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+    `https://i.ytimg.com/vi/${id}/mqdefault.jpg`
+  ];
+  const thumbnailUrls = options.thumbnailUrl
+    ? [options.thumbnailUrl, ...generatedThumbnails]
+    : generatedThumbnails;
+
   return {
     id,
     label: options.label || "",
     platform,
     url: `https://www.youtube.com/watch?v=${id}`,
     embedUrl: `https://www.youtube.com/embed/${id}`,
-    thumbnailUrl: options.thumbnailUrl || `https://img.youtube.com/vi/${id}/hqdefault.jpg`
+    thumbnailUrl: thumbnailUrls[0],
+    thumbnailFallbackUrls: thumbnailUrls.slice(1)
   };
 }
 
