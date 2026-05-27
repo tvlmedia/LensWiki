@@ -571,9 +571,7 @@ select {
 }
 
 .library-status {
-  margin-top: 12px;
-  color: var(--subtle);
-  font-size: 0.86rem;
+  display: none;
 }
 
 .library-status.has-failures {
