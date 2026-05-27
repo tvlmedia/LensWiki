@@ -2673,8 +2673,7 @@ function getKeySpecCoverage(lens) {
 
 function shouldShowRehousingSection(lens) {
   if (lens.isRehoused === true) {
-    return hasValue(lens.donorLens)
-      || hasValue(lens.rehousingInfo)
+    return hasValue(lens.rehousingInfo)
       || hasValue(lens.originalMount)
       || hasValue(lens.donorMount)
       || hasValue(lens.rehousingCompany)
@@ -2684,7 +2683,7 @@ function shouldShowRehousingSection(lens) {
       || hasOriginalOpticsYears(lens);
   }
   if (lens._isRehousedExplicit) return false;
-  return (hasValue(lens.donorLens) || hasValue(lens.rehousingInfo) || hasDonorGlassProductionYears(lens) || hasOriginalOpticsYears(lens)) && hasRehousingEvidence(lens);
+  return (hasValue(lens.rehousingInfo) || hasDonorGlassProductionYears(lens) || hasOriginalOpticsYears(lens)) && hasRehousingEvidence(lens);
 }
 
 function shouldShowRehousingInfo(lens) {
