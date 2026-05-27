@@ -3463,6 +3463,12 @@ function parseEditValue(value, type, key) {
   if (key === "youtubeEmbeds") {
     return normalizeYouTubeSamples(value);
   }
+  if (type === "structured") {
+    return parseStructuredEditValue(value, key);
+  }
+  if (type === "object") {
+    return parseObjectEditValue(value, key);
+  }
   if (NORMALIZED_ARRAY_FIELDS.has(key)) {
     return normalizeArrayField(value, getArrayFieldOptions(key, type));
   }
@@ -3471,12 +3477,6 @@ function parseEditValue(value, type, key) {
   }
   if (type === "lines") {
     return splitLines(value);
-  }
-  if (type === "structured") {
-    return parseStructuredEditValue(value, key);
-  }
-  if (type === "object") {
-    return parseObjectEditValue(value, key);
   }
   return value;
 }
@@ -3563,6 +3563,8 @@ function buildLensReplacement(currentLens, replacement) {
 }
 
 function deepMergeJsonObject(base, patch) {
+  if (Array.isArray(patch)) return cloneJsonValue(patch);
+  if (!isPlainObject(patch)) return cloneJsonValue(patch);
   const next = cloneJsonValue(base) || {};
   Object.entries(patch || {}).forEach(([key, value]) => {
     if (isPlainObject(value) && isPlainObject(next[key])) {
