@@ -1090,7 +1090,7 @@ function renderLensDetails(lens) {
     ["Production years", lens.productionYears],
     ["Country", lens.country],
     ["Type", lens.type],
-    ["Coverage", lens.coverage],
+    ["Coverage", getKeySpecCoverage(lens)],
     ["Mounts", mountLabels.length ? createChipValue(mountLabels) : ""],
     ["Focal lengths", lens.focalLengths],
     ...(hasFocalLengthSpecs ? [] : [["T-stops / f-stops", lens.tStops]]),
@@ -2294,6 +2294,14 @@ function getCardCoverage(lens) {
   const coverage = safeText(lens.coverage);
   if (!coverage) return "";
   return coverage.length > 74 ? `${coverage.slice(0, 71).trim()}...` : coverage;
+}
+
+function getKeySpecCoverage(lens) {
+  if (lens.id === "2024-ironglass-soviet-mkii") {
+    return "Rated as FF, with many focal lengths covering medium format.\nCheck the table below for exact coverage.";
+  }
+
+  return lens.coverage;
 }
 
 function shouldShowRehousingSection(lens) {
