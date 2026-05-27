@@ -4,9 +4,13 @@
     "focalLengths",
     "tStops",
     "characteristics",
+    "type",
     "strengths",
     "weaknesses",
-    "closeFocus"
+    "closeFocus",
+    "sources",
+    "famousUses",
+    "focalLengthSpecs"
   ]);
 
   const LENS_FIELDS = [
@@ -37,6 +41,7 @@
     { key: "weaknesses", label: "Weaknesses", type: "lines" },
     { key: "famousUses", label: "Known use", type: "structured" },
     { key: "sources", label: "Sources", type: "structured" },
+    { key: "focalLengthSpecs", label: "Focal length specs", type: "structured" },
     { key: "notes", label: "Notes", type: "textarea" }
   ];
 
@@ -340,6 +345,7 @@
           <div class="panel-actions">
             <button class="primary-button" type="submit">${draft.mode === "new" ? "Create lens" : "Save changes"}</button>
             <button class="secondary-button" type="button" data-editor-action="copy-json">Copy JSON</button>
+            <button class="secondary-button" type="button" data-editor-action="paste-json">Paste JSON</button>
             <button class="secondary-button" type="button" data-editor-action="cancel">Cancel</button>
           </div>
         </div>
@@ -352,11 +358,100 @@
             </div>
           </div>
         ` : ""}
+        ${draft.jsonPatch?.open ? renderJsonPatchPanel(draft.jsonPatch) : ""}
         <div class="form-grid">
           ${LENS_FIELDS.map((field) => renderEditorField(draft, field)).join("")}
         </div>
       </form>
     `;
+  }
+
+  function renderJsonPatchPanel(patchState) {
+    const previewRows = patchState.preview?.length ? `
+      <div class="json-patch-preview">
+        ${patchState.preview.map((change) => `
+          <div class="json-patch-row">
+            <strong>${escapeHtml(change.label)}</strong>
+            <p><span>Current</span>${escapeHtml(change.currentDisplay || "-")}</p>
+            <p><span>New</span>${escapeHtml(change.nextDisplay || "-")}</p>
+          </div>
+        `).join("")}
+      </div>
+    ` : "";
+    const ignored = patchState.ignored?.length
+      ? `<p class="json-patch-note">Ignored unknown fields: ${escapeHtml(patchState.ignored.join(", "))}</p>`
+      : "";
+
+    return `
+      <section class="json-patch-panel">
+        <div class="json-patch-heading">
+          <div>
+            <p class="access-kicker">Paste JSON</p>
+            <h3>Apply JSON patch</h3>
+          </div>
+          <button class="secondary-button mini" type="button" data-editor-action="cancel-json-patch">Cancel</button>
+        </div>
+        <textarea data-json-patch-input rows="8" placeholder='"focalLengths": ["16mm", "20mm"]'>${escapeHtml(patchState.raw || "")}</textarea>
+        ${patchState.error ? `<p class="json-patch-error">${escapeHtml(patchState.error)}</p>` : ""}
+        ${ignored}
+        ${previewRows}
+        <div class="panel-actions">
+          <button class="secondary-button" type="button" data-editor-action="preview-json-patch">Preview changes</button>
+          <button class="primary-button" type="button" data-editor-action="apply-json-patch" ${patchState.preview?.length ? "" : "disabled"}>Apply changes</button>
+        </div>
+      </section>
+    `;
+  }
+
+  function openEditorJsonPatchPanel() {
+    if (!state.editorDraft) return;
+    state.editorDraft.jsonPatch = {
+      open: true,
+      raw: state.editorDraft.jsonPatch?.raw || "",
+      preview: [],
+      ignored: [],
+      error: ""
+    };
+    renderEditorForm();
+  }
+
+  function closeEditorJsonPatchPanel() {
+    if (!state.editorDraft?.jsonPatch) return;
+    state.editorDraft.jsonPatch = null;
+    renderEditorForm();
+  }
+
+  function previewEditorJsonPatch() {
+    if (!state.editorDraft?.jsonPatch) return;
+    const parsed = parseJsonPatchInput(state.editorDraft.jsonPatch.raw);
+    if (parsed.error) {
+      state.editorDraft.jsonPatch.error = parsed.error;
+      state.editorDraft.jsonPatch.preview = [];
+      state.editorDraft.jsonPatch.ignored = [];
+      renderEditorForm();
+      return;
+    }
+
+    const prepared = prepareDraftPatch(parsed.value, state.editorDraft.values, LENS_FIELDS);
+    state.editorDraft.jsonPatch.error = prepared.error;
+    state.editorDraft.jsonPatch.preview = prepared.preview;
+    state.editorDraft.jsonPatch.ignored = prepared.ignored;
+    state.editorDraft.jsonPatch.patchValues = prepared.patchValues;
+    renderEditorForm();
+  }
+
+  function applyEditorJsonPatch() {
+    if (!state.editorDraft?.jsonPatch) return;
+    if (!state.editorDraft.jsonPatch.preview?.length) {
+      previewEditorJsonPatch();
+      return;
+    }
+
+    Object.assign(state.editorDraft.values, state.editorDraft.jsonPatch.patchValues);
+    state.editorDraft.dirty = true;
+    state.editorDraft.jsonPatch = null;
+    persistEditorDraft();
+    renderEditorForm();
   }
 
   function renderEditorField(draft, field) {
@@ -406,6 +501,22 @@
       }
     }
 
+    if (event.target.closest('[data-editor-action="paste-json"]')) {
+      openEditorJsonPatchPanel();
+    }
+
+    if (event.target.closest('[data-editor-action="preview-json-patch"]')) {
+      previewEditorJsonPatch();
+    }
+
+    if (event.target.closest('[data-editor-action="apply-json-patch"]')) {
+      applyEditorJsonPatch();
+    }
+
+    if (event.target.closest('[data-editor-action="cancel-json-patch"]')) {
+      closeEditorJsonPatchPanel();
+    }
+
     if (event.target.closest('[data-editor-action="cancel"]')) {
       if (hasDirtyEditorDraft() && !confirm("Discard unsaved changes?")) return;
       clearCurrentEditorDraft();
@@ -422,6 +533,14 @@
   }
 
   function handleEditorInput(event) {
+    if (event.target.matches("[data-json-patch-input]")) {
+      if (state.editorDraft?.jsonPatch) {
+        state.editorDraft.jsonPatch.raw = event.target.value;
+        state.editorDraft.jsonPatch.error = "";
+      }
+      return;
+    }
+
     if (!state.editorDraft || !event.target.closest("#lensAdminForm")) return;
     const fieldName = event.target.name;
     if (!fieldName) return;
@@ -812,11 +931,101 @@
       const number = Number(value);
       return Number.isFinite(number) ? number : "";
     }
-    if (NORMALIZED_ARRAY_FIELDS.has(key)) return normalizeArrayField(value, { fieldName: key });
+    if (NORMALIZED_ARRAY_FIELDS.has(key)) {
+      return normalizeArrayField(value, {
+        fieldName: key,
+        separator: type === "lines" ? "lines" : "",
+        preserveObjects: type === "structured"
+      });
+    }
     if (type === "list") return splitCommaList(value);
     if (type === "lines") return splitLines(value);
     if (type === "structured") return parseStructuredValue(value, key);
     return value;
+  }
+
+  function parseJsonPatchInput(rawInput) {
+    const raw = safeText(rawInput);
+    if (!raw) {
+      return { error: "Could not parse JSON. Check brackets, commas and quotes." };
+    }
+
+    const attempts = [raw];
+    if (!raw.startsWith("{")) {
+      attempts.push(`{${raw.replace(/,\s*$/g, "")}}`);
+    }
+
+    for (const candidate of attempts) {
+      try {
+        const parsed = JSON.parse(candidate);
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          return { value: parsed };
+        }
+      } catch (_error) {
+        // Try the next supported shape.
+      }
+    }
+
+    return { error: "Could not parse JSON. Check brackets, commas and quotes." };
+  }
+
+  function prepareDraftPatch(patchObject, currentValues, fields) {
+    const fieldMap = new Map(fields.map((field) => [field.key, field]));
+    const patchValues = {};
+    const preview = [];
+    const ignored = [];
+
+    Object.entries(patchObject).forEach(([key, value]) => {
+      const field = fieldMap.get(key);
+      if (!field) {
+        ignored.push(key);
+        return;
+      }
+
+      const nextValue = serializePatchValue(value, field);
+      const currentValue = currentValues[field.key] ?? "";
+      if (String(currentValue) === String(nextValue)) return;
+
+      patchValues[field.key] = nextValue;
+      preview.push({
+        key: field.key,
+        label: field.label,
+        currentDisplay: formatPatchPreviewValue(currentValue),
+        nextDisplay: formatPatchPreviewValue(nextValue)
+      });
+    });
+
+    return {
+      error: preview.length ? "" : "No changes to apply.",
+      ignored,
+      patchValues,
+      preview
+    };
+  }
+
+  function serializePatchValue(value, field) {
+    if (field.type === "checkbox") return Boolean(value);
+    if (field.type === "number") return hasValue(value) ? String(value) : "";
+    if (NORMALIZED_ARRAY_FIELDS.has(field.key)) {
+      const normalized = normalizeArrayField(value, {
+        fieldName: field.key,
+        separator: field.type === "lines" ? "lines" : "",
+        preserveObjects: field.type === "structured"
+      });
+      return serializeField(normalized, field.type);
+    }
+    if (field.type === "structured") {
+      const items = Array.isArray(value) ? value : [value];
+      return JSON.stringify(items, null, 2);
+    }
+    if (Array.isArray(value)) return value.map(formatListItem).join(field.type === "lines" ? "\n" : ", ");
+    if (value && typeof value === "object") return JSON.stringify(value, null, 2);
+    return safeText(value);
+  }
+
+  function formatPatchPreviewValue(value) {
+    const text = safeText(value);
+    return text.length > 260 ? `${text.slice(0, 257).trim()}...` : text;
   }
 
   function parseStructuredValue(value, key) {
@@ -969,6 +1178,9 @@
 
   function normalizeArrayField(value, options = {}) {
     if (Array.isArray(value)) {
+      if (options.preserveObjects && value.some((item) => item && typeof item === "object")) {
+        return value.map((item) => (item && typeof item === "object" ? item : cleanArrayItem(item))).filter(Boolean);
+      }
       const rawItems = value.map((item) => (item && typeof item === "object" ? formatListItem(item) : safeText(item)));
       if (rawItems.some(hasJsonArraySyntaxArtifact)) {
         return normalizeArrayField(rawItems.join(", "), options);
@@ -1027,10 +1239,19 @@
     const cleaned = { ...lens };
     NORMALIZED_ARRAY_FIELDS.forEach((fieldName) => {
       if (hasValue(cleaned[fieldName])) {
-        cleaned[fieldName] = normalizeArrayField(cleaned[fieldName], { fieldName });
+        const field = getLensField(fieldName);
+        cleaned[fieldName] = normalizeArrayField(cleaned[fieldName], {
+          fieldName,
+          separator: field?.type === "lines" ? "lines" : "",
+          preserveObjects: field?.type === "structured"
+        });
       }
     });
     return cleaned;
+  }
+
+  function getLensField(fieldName) {
+    return LENS_FIELDS.find((field) => field.key === fieldName);
   }
 
   function stripJsonPropertyPrefix(value) {

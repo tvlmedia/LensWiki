@@ -35,9 +35,13 @@ const NORMALIZED_ARRAY_FIELDS = new Set([
   "focalLengths",
   "tStops",
   "characteristics",
+  "type",
   "strengths",
   "weaknesses",
-  "closeFocus"
+  "closeFocus",
+  "sources",
+  "famousUses",
+  "focalLengthSpecs"
 ]);
 const ADMIN_EDIT_FIELDS = [
   { key: "manufacturer", label: "Maker / brand", type: "text" },
@@ -502,7 +506,7 @@ function warnIfIdDoesNotMatchFile(id, fileName) {
 }
 
 function normalizeLens(lens, fileName) {
-  const type = asArray(lens.type);
+  const type = normalizeArrayField(lens.type, { fieldName: "type" });
   const timelineCategory = safeText(lens.timelineCategory);
   const cardLabel = safeText(lens.cardLabel)
     || timelineCategory
@@ -537,7 +541,7 @@ function normalizeLens(lens, fileName) {
     focalLengths: normalizeArrayField(lens.focalLengths),
     tStops: normalizeArrayField(lens.tStops),
     closeFocus: normalizeArrayField(lens.closeFocus),
-    focalLengthSpecs: asArray(lens.focalLengthSpecs),
+    focalLengthSpecs: normalizeArrayField(lens.focalLengthSpecs, { fieldName: "focalLengthSpecs", preserveObjects: true }),
     opticalFormula: safeText(lens.opticalFormula),
     elements: numberOrNull(lens.elements),
     groups: numberOrNull(lens.groups),
@@ -549,11 +553,11 @@ function normalizeLens(lens, fileName) {
     characteristics: normalizeArrayField(lens.characteristics),
     strengths: normalizeArrayField(lens.strengths),
     weaknesses: normalizeArrayField(lens.weaknesses),
-    famousUses: asArray(lens.famousUses),
+    famousUses: normalizeArrayField(lens.famousUses, { fieldName: "famousUses", preserveObjects: true }),
     youtubeEmbeds: asArray(lens.youtubeEmbeds),
     imageUrls: asArray(lens.imageUrls),
     relatedLensIds: asArray(lens.relatedLensIds),
-    sources: asArray(lens.sources),
+    sources: normalizeArrayField(lens.sources, { fieldName: "sources", preserveObjects: true }),
     confidence: normalizeConfidence(lens.confidence),
     libraryStatus: safeText(lens.libraryStatus),
     curationNotes: safeText(lens.curationNotes),
@@ -885,6 +889,22 @@ function handleDrawerAction(event) {
     });
   }
 
+  if (action.dataset.drawerAction === "paste-json") {
+    openPublicJsonPatchPanel();
+  }
+
+  if (action.dataset.drawerAction === "preview-json-patch") {
+    previewPublicJsonPatch();
+  }
+
+  if (action.dataset.drawerAction === "apply-json-patch") {
+    applyPublicJsonPatch();
+  }
+
+  if (action.dataset.drawerAction === "cancel-json-patch") {
+    closePublicJsonPatchPanel();
+  }
+
   if (action.dataset.drawerAction === "cancel-edit") {
     if (hasDirtyPublicDraft() && !confirm("Discard unsaved changes?")) return;
     if (hasDirtyPublicDraft()) clearCurrentPublicDraft();
@@ -904,6 +924,14 @@ function handleDrawerAction(event) {
 }
 
 function handleDrawerInput(event) {
+  if (event.target.matches("[data-json-patch-input]")) {
+    if (state.editDraft?.jsonPatch) {
+      state.editDraft.jsonPatch.raw = event.target.value;
+      state.editDraft.jsonPatch.error = "";
+    }
+    return;
+  }
+
   if (!state.editDraft || !event.target.closest("#lensEditForm")) return;
   const fieldName = event.target.name;
   if (!fieldName) return;
@@ -1018,6 +1046,7 @@ function renderLensEditForm(lens) {
       <div class="admin-lens-actions">
         <button class="primary-button small" type="submit">Save changes</button>
         <button class="secondary-button small" type="button" data-drawer-action="copy-json">Copy JSON</button>
+        <button class="secondary-button small" type="button" data-drawer-action="paste-json">Paste JSON</button>
         <button class="ghost-button small" type="button" data-drawer-action="cancel-edit">Cancel</button>
         <span class="copy-status" data-copy-status hidden></span>
       </div>
@@ -1035,11 +1064,100 @@ function renderLensEditForm(lens) {
         </div>
       </div>
     ` : ""}
+    ${draft.jsonPatch?.open ? renderJsonPatchPanel(draft.jsonPatch) : ""}
     <div class="edit-grid">
       ${ADMIN_EDIT_FIELDS.map((field) => renderEditField(draft, field)).join("")}
     </div>
   `;
   return form;
+}
+
+function renderJsonPatchPanel(patchState) {
+  const previewRows = patchState.preview?.length ? `
+    <div class="json-patch-preview">
+      ${patchState.preview.map((change) => `
+        <div class="json-patch-row">
+          <strong>${escapeHtml(change.label)}</strong>
+          <p><span>Current</span>${escapeHtml(change.currentDisplay || "-")}</p>
+          <p><span>New</span>${escapeHtml(change.nextDisplay || "-")}</p>
+        </div>
+      `).join("")}
+    </div>
+  ` : "";
+  const ignored = patchState.ignored?.length
+    ? `<p class="json-patch-note">Ignored unknown fields: ${escapeHtml(patchState.ignored.join(", "))}</p>`
+    : "";
+
+  return `
+    <section class="json-patch-panel">
+      <div class="json-patch-heading">
+        <div>
+          <p class="eyebrow">Paste JSON</p>
+          <h3>Apply JSON patch</h3>
+        </div>
+        <button class="ghost-button small" type="button" data-drawer-action="cancel-json-patch">Cancel</button>
+      </div>
+      <textarea data-json-patch-input rows="8" placeholder='"focalLengths": ["16mm", "20mm"]'>${escapeHtml(patchState.raw || "")}</textarea>
+      ${patchState.error ? `<p class="json-patch-error">${escapeHtml(patchState.error)}</p>` : ""}
+      ${ignored}
+      ${previewRows}
+      <div class="admin-lens-actions">
+        <button class="secondary-button small" type="button" data-drawer-action="preview-json-patch">Preview changes</button>
+        <button class="primary-button small" type="button" data-drawer-action="apply-json-patch" ${patchState.preview?.length ? "" : "disabled"}>Apply changes</button>
+      </div>
+    </section>
+  `;
+}
+
+function openPublicJsonPatchPanel() {
+  if (!state.editDraft) return;
+  state.editDraft.jsonPatch = {
+    open: true,
+    raw: state.editDraft.jsonPatch?.raw || "",
+    preview: [],
+    ignored: [],
+    error: ""
+  };
+  rerenderActiveLens();
+}
+
+function closePublicJsonPatchPanel() {
+  if (!state.editDraft?.jsonPatch) return;
+  state.editDraft.jsonPatch = null;
+  rerenderActiveLens();
+}
+
+function previewPublicJsonPatch() {
+  if (!state.editDraft?.jsonPatch) return;
+  const parsed = parseJsonPatchInput(state.editDraft.jsonPatch.raw);
+  if (parsed.error) {
+    state.editDraft.jsonPatch.error = parsed.error;
+    state.editDraft.jsonPatch.preview = [];
+    state.editDraft.jsonPatch.ignored = [];
+    rerenderActiveLens();
+    return;
+  }
+
+  const prepared = prepareDraftPatch(parsed.value, state.editDraft.values, ADMIN_EDIT_FIELDS);
+  state.editDraft.jsonPatch.error = prepared.error;
+  state.editDraft.jsonPatch.preview = prepared.preview;
+  state.editDraft.jsonPatch.ignored = prepared.ignored;
+  state.editDraft.jsonPatch.patchValues = prepared.patchValues;
+  rerenderActiveLens();
+}
+
+function applyPublicJsonPatch() {
+  if (!state.editDraft?.jsonPatch) return;
+  if (!state.editDraft.jsonPatch.preview?.length) {
+    previewPublicJsonPatch();
+    return;
+  }
+
+  Object.assign(state.editDraft.values, state.editDraft.jsonPatch.patchValues);
+  state.editDraft.dirty = true;
+  state.editDraft.jsonPatch = null;
+  persistPublicDraft();
+  rerenderActiveLens();
 }
 
 function renderEditField(draft, field) {
@@ -1940,7 +2058,11 @@ function parseEditValue(value, type, key) {
     return numberOrNull(value);
   }
   if (NORMALIZED_ARRAY_FIELDS.has(key)) {
-    return normalizeArrayField(value, { fieldName: key });
+    return normalizeArrayField(value, {
+      fieldName: key,
+      separator: type === "lines" ? "lines" : "",
+      preserveObjects: type === "structured"
+    });
   }
   if (type === "list") {
     return splitCommaList(value);
@@ -1952,6 +2074,90 @@ function parseEditValue(value, type, key) {
     return parseStructuredEditValue(value, key);
   }
   return value;
+}
+
+function parseJsonPatchInput(rawInput) {
+  const raw = safeText(rawInput);
+  if (!raw) {
+    return { error: "Could not parse JSON. Check brackets, commas and quotes." };
+  }
+
+  const attempts = [raw];
+  if (!raw.startsWith("{")) {
+    attempts.push(`{${raw.replace(/,\s*$/g, "")}}`);
+  }
+
+  for (const candidate of attempts) {
+    try {
+      const parsed = JSON.parse(candidate);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return { value: parsed };
+      }
+    } catch (_error) {
+      // Try the next shape.
+    }
+  }
+
+  return { error: "Could not parse JSON. Check brackets, commas and quotes." };
+}
+
+function prepareDraftPatch(patchObject, currentValues, fields) {
+  const fieldMap = new Map(fields.map((field) => [field.key, field]));
+  const patchValues = {};
+  const preview = [];
+  const ignored = [];
+
+  Object.entries(patchObject).forEach(([key, value]) => {
+    const field = fieldMap.get(key);
+    if (!field) {
+      ignored.push(key);
+      return;
+    }
+
+    const nextValue = serializePatchValue(value, field);
+    const currentValue = currentValues[field.key] ?? "";
+    if (String(currentValue) === String(nextValue)) return;
+
+    patchValues[field.key] = nextValue;
+    preview.push({
+      key: field.key,
+      label: field.label,
+      currentDisplay: formatPatchPreviewValue(currentValue),
+      nextDisplay: formatPatchPreviewValue(nextValue)
+    });
+  });
+
+  return {
+    error: preview.length ? "" : "No changes to apply.",
+    ignored,
+    patchValues,
+    preview
+  };
+}
+
+function serializePatchValue(value, field) {
+  if (field.type === "checkbox") return Boolean(value);
+  if (field.type === "number") return hasValue(value) ? String(value) : "";
+  if (NORMALIZED_ARRAY_FIELDS.has(field.key)) {
+    const normalized = normalizeArrayField(value, {
+      fieldName: field.key,
+      separator: field.type === "lines" ? "lines" : "",
+      preserveObjects: field.type === "structured"
+    });
+    return serializeEditValue(normalized, field.type);
+  }
+  if (field.type === "structured") {
+    const items = Array.isArray(value) ? value : [value];
+    return JSON.stringify(items, null, 2);
+  }
+  if (Array.isArray(value)) return value.map(formatListItem).join(field.type === "lines" ? "\n" : ", ");
+  if (value && typeof value === "object") return JSON.stringify(value, null, 2);
+  return safeText(value);
+}
+
+function formatPatchPreviewValue(value) {
+  const text = safeText(value);
+  return text.length > 260 ? `${text.slice(0, 257).trim()}...` : text;
 }
 
 function parseStructuredEditValue(value, key) {
@@ -1977,6 +2183,9 @@ function splitLines(value) {
 
 function normalizeArrayField(value, options = {}) {
   if (Array.isArray(value)) {
+    if (options.preserveObjects && value.some((item) => item && typeof item === "object")) {
+      return value.map((item) => (item && typeof item === "object" ? item : cleanArrayItem(item))).filter(Boolean);
+    }
     const rawItems = value.map((item) => (item && typeof item === "object" ? formatListItem(item) : safeText(item)));
     if (rawItems.some(hasJsonArraySyntaxArtifact)) {
       return normalizeArrayField(rawItems.join(", "), options);
@@ -2035,10 +2244,19 @@ function cleanLensArrayFields(lens) {
   const cleaned = { ...lens };
   NORMALIZED_ARRAY_FIELDS.forEach((fieldName) => {
     if (hasValue(cleaned[fieldName])) {
-      cleaned[fieldName] = normalizeArrayField(cleaned[fieldName], { fieldName });
+      const field = getAdminEditField(fieldName);
+      cleaned[fieldName] = normalizeArrayField(cleaned[fieldName], {
+        fieldName,
+        separator: field?.type === "lines" ? "lines" : "",
+        preserveObjects: field?.type === "structured"
+      });
     }
   });
   return cleaned;
+}
+
+function getAdminEditField(fieldName) {
+  return ADMIN_EDIT_FIELDS.find((field) => field.key === fieldName);
 }
 
 function stripJsonPropertyPrefix(value) {

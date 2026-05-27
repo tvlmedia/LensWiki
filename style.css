@@ -1265,6 +1265,83 @@ button.dense-row:hover {
   font: 0.82rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
+.json-patch-panel {
+  clear: both;
+  margin: 0 52px 18px 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.json-patch-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.json-patch-heading h3 {
+  margin: 0;
+}
+
+.json-patch-panel textarea {
+  width: 100%;
+  min-height: 170px;
+  padding: 10px;
+  color: var(--ink);
+  background: #090b0f;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font: 0.82rem/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  resize: vertical;
+}
+
+.json-patch-error,
+.json-patch-note {
+  margin: 10px 0 0;
+  font-size: 0.86rem;
+}
+
+.json-patch-error {
+  color: #ffe0e6;
+}
+
+.json-patch-note {
+  color: var(--muted);
+}
+
+.json-patch-preview {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.json-patch-row {
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.json-patch-row strong {
+  display: block;
+  margin-bottom: 6px;
+}
+
+.json-patch-row p {
+  margin: 4px 0 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.json-patch-row span {
+  display: inline-block;
+  min-width: 64px;
+  color: var(--subtle);
+}
+
 .confidence {
   color: #f9d4db;
   background: rgba(232, 92, 117, 0.14);
