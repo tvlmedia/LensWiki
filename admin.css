@@ -38,13 +38,15 @@ a {
 }
 
 button,
-input {
+input,
+textarea {
   font: inherit;
 }
 
 button,
 a,
-input {
+input,
+textarea {
   outline-color: var(--accent);
 }
 
@@ -172,17 +174,28 @@ label {
   font-weight: 700;
 }
 
-input {
+input,
+textarea {
   width: 100%;
-  height: 44px;
-  padding: 0 12px;
   color: var(--text);
   background: #090b0f;
   border: 1px solid var(--line);
   border-radius: var(--radius);
 }
 
-input:focus {
+input {
+  height: 44px;
+  padding: 0 12px;
+}
+
+textarea {
+  min-height: 110px;
+  padding: 11px 12px;
+  resize: vertical;
+}
+
+input:focus,
+textarea:focus {
   border-color: rgba(47, 156, 255, 0.42);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
@@ -205,6 +218,14 @@ button:disabled {
   border-radius: var(--radius);
   font-weight: 800;
   cursor: pointer;
+}
+
+.primary-button.mini,
+.secondary-button.mini,
+.danger-button.mini {
+  min-height: 32px;
+  padding: 0 10px;
+  font-size: 0.78rem;
 }
 
 .primary-button {
@@ -289,7 +310,7 @@ button:disabled {
 }
 
 .records-row {
-  grid-template-columns: minmax(160px, 1.35fr) minmax(110px, 0.85fr) minmax(82px, 0.55fr) minmax(92px, 0.7fr);
+  grid-template-columns: minmax(160px, 1.35fr) minmax(110px, 0.85fr) minmax(70px, 0.4fr) minmax(110px, 0.7fr) minmax(76px, 0.35fr);
   padding: 10px 11px;
   color: var(--muted);
   border-top: 1px solid var(--line);
@@ -325,6 +346,7 @@ button:disabled {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+  margin-bottom: 16px;
 }
 
 .dashboard-actions div {
@@ -343,6 +365,75 @@ button:disabled {
   margin: 8px 0 0;
   color: var(--subtle);
   font-size: 0.82rem;
+}
+
+.editor-panel,
+.import-panel {
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.panel-head h2 {
+  margin-bottom: 0;
+}
+
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  justify-content: flex-end;
+}
+
+.lens-admin-form,
+.form-grid,
+.import-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.form-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.form-field {
+  min-width: 0;
+}
+
+.form-field-wide {
+  grid-column: 1 / -1;
+}
+
+.form-field small {
+  color: var(--subtle);
+  font-weight: 500;
+}
+
+.checkbox-field {
+  align-self: end;
+  min-height: 44px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: #090b0f;
+}
+
+.checkbox-field input {
+  width: auto;
+  height: auto;
 }
 
 .dashboard-footer {
@@ -374,7 +465,18 @@ button:disabled {
 
   .dashboard-head,
   .dashboard-actions,
-  .records-row {
+  .records-row,
+  .form-grid,
+  .panel-head {
     grid-template-columns: 1fr;
+  }
+
+  .panel-head {
+    display: grid;
+  }
+
+  .panel-actions,
+  .panel-actions button {
+    width: 100%;
   }
 }

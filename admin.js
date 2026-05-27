@@ -1,4 +1,34 @@
 (() => {
+  const LENS_FIELDS = [
+    { key: "id", label: "Lens ID", type: "text", required: true },
+    { key: "slug", label: "Slug", type: "text" },
+    { key: "manufacturer", label: "Maker / brand", type: "text" },
+    { key: "name", label: "Lens name", type: "text", required: true },
+    { key: "yearIntroduced", label: "Year introduced", type: "number", required: true },
+    { key: "yearApproximate", label: "Approximate year", type: "checkbox" },
+    { key: "status", label: "Publication status", type: "text" },
+    { key: "importance", label: "Importance", type: "text" },
+    { key: "confidence", label: "Confidence", type: "text" },
+    { key: "timelineCategory", label: "Timeline category", type: "text" },
+    { key: "cardLabel", label: "Short archive label", type: "text" },
+    { key: "publicSummary", label: "Overview", type: "textarea" },
+    { key: "lookSummary", label: "Look", type: "textarea" },
+    { key: "productionYears", label: "Production years", type: "text" },
+    { key: "country", label: "Country", type: "text" },
+    { key: "type", label: "Type", type: "list" },
+    { key: "characteristics", label: "Tags / character", type: "list" },
+    { key: "coverage", label: "Coverage", type: "text" },
+    { key: "mounts", label: "Mounts", type: "list" },
+    { key: "focalLengths", label: "Focal lengths", type: "list" },
+    { key: "tStops", label: "T-stops / F-stops", type: "list" },
+    { key: "seriesHistory", label: "History / series history", type: "lines" },
+    { key: "strengths", label: "Strengths", type: "lines" },
+    { key: "weaknesses", label: "Weaknesses", type: "lines" },
+    { key: "famousUses", label: "Known use", type: "structured" },
+    { key: "sources", label: "Sources", type: "structured" },
+    { key: "notes", label: "Notes", type: "textarea" }
+  ];
+
   const els = {
     accessCard: document.querySelector("#adminAccessCard"),
     accessCopy: document.querySelector("#accessCopy"),
@@ -9,28 +39,42 @@
     dashboard: document.querySelector("#adminDashboard"),
     dashboardStatus: document.querySelector("#dashboardStatus"),
     emailInput: document.querySelector("#emailInput"),
+    editorPanel: document.querySelector("#editorPanel"),
+    importButton: document.querySelector("#importButton"),
+    importFile: document.querySelector("#importFile"),
+    importPanel: document.querySelector("#importPanel"),
+    importPreviewButton: document.querySelector("#importPreviewButton"),
+    importRunButton: document.querySelector("#importRunButton"),
+    importStatus: document.querySelector("#importStatus"),
+    importTextarea: document.querySelector("#importTextarea"),
     loginButton: document.querySelector("#loginButton"),
     loginForm: document.querySelector("#loginForm"),
     loginView: document.querySelector("#loginView"),
     logoutButton: document.querySelector("#logoutButton"),
+    newLensButton: document.querySelector("#newLensButton"),
     passwordInput: document.querySelector("#passwordInput"),
     recordsList: document.querySelector("#supabaseRecordsList"),
     statusMessage: document.querySelector("#statusMessage"),
-    supabaseRecordCount: document.querySelector("#supabaseRecordCount"),
+    supabaseRecordCount: document.querySelector("#supabaseRecordCount")
   };
 
   const config = {
     url: window.LENSWIKI_SUPABASE_URL || "",
-    anonKey: window.LENSWIKI_SUPABASE_ANON_KEY || "",
+    anonKey: window.LENSWIKI_SUPABASE_ANON_KEY || ""
   };
 
-  let supabaseClient = null;
+  const state = {
+    client: null,
+    currentUser: null,
+    isAdmin: false,
+    records: [],
+    importRecords: []
+  };
 
   document.addEventListener("DOMContentLoaded", init);
 
   async function init() {
-    els.loginForm.addEventListener("submit", handleLogin);
-    els.logoutButton.addEventListener("click", handleLogout);
+    bindEvents();
 
     if (isMissingConfig(config)) {
       els.configNotice.hidden = false;
@@ -39,43 +83,48 @@
       return;
     }
 
-    if (!isValidSupabaseUrl(config.url)) {
-      showStatus("Admin configuration is invalid.", "error");
+    if (!isValidSupabaseUrl(config.url) || !window.supabase?.createClient) {
+      showStatus("Admin service could not load. Please try again later.", "error");
       showLoginView({ disabled: true });
       return;
     }
 
-    if (!window.supabase?.createClient) {
-      showStatus("Admin service could not load. Check your connection and try again.", "error");
-      showLoginView({ disabled: true });
-      return;
-    }
+    state.client = window.supabase.createClient(config.url, config.anonKey);
 
-    supabaseClient = window.supabase.createClient(config.url, config.anonKey);
-
-    const sessionResult = await safeSupabaseCall(() => supabaseClient.auth.getSession());
+    const sessionResult = await safeSupabaseCall(() => state.client.auth.getSession());
     if (sessionResult.error) {
-      showStatus(getFriendlySupabaseError(sessionResult.error), "error");
-      setLoginDisabled(false);
+      showStatus("Could not restore admin session.", "error");
       showLoginView();
       return;
     }
 
-    const { data } = sessionResult;
-    if (data?.session) {
-      await restoreUser();
+    if (sessionResult.data?.session?.user) {
+      await verifyAdminAccess(sessionResult.data.session.user);
     } else {
       showLoginView();
-      clearStatus();
     }
 
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
+    state.client.auth.onAuthStateChange((_event, session) => {
       if (session?.user) {
         verifyAdminAccess(session.user);
       } else {
         showLoginView();
       }
     });
+  }
+
+  function bindEvents() {
+    els.loginForm.addEventListener("submit", handleLogin);
+    els.logoutButton.addEventListener("click", handleLogout);
+    els.recordsList.addEventListener("click", handleRecordListClick);
+    els.newLensButton.addEventListener("click", () => openLensEditor(createEmptyLens(), "new"));
+    els.importButton.addEventListener("click", openImportPanel);
+    els.editorPanel.addEventListener("submit", handleEditorSubmit);
+    els.editorPanel.addEventListener("click", handleEditorClick);
+    els.editorPanel.addEventListener("input", handleEditorInput);
+    els.importPreviewButton.addEventListener("click", previewImport);
+    els.importRunButton.addEventListener("click", runImport);
+    els.importFile.addEventListener("change", handleImportFile);
   }
 
   async function handleLogin(event) {
@@ -85,41 +134,29 @@
 
     const email = els.emailInput.value.trim();
     const password = els.passwordInput.value;
-
     const { data, error } = await safeSupabaseCall(() =>
-      supabaseClient.auth.signInWithPassword({ email, password })
+      state.client.auth.signInWithPassword({ email, password })
     );
-    if (error) {
-      showStatus(getFriendlySupabaseError(error), "error");
+
+    if (error || !data?.user) {
+      showStatus(getFriendlyLoginError(error), "error");
       setLoginDisabled(false);
       return;
     }
 
+    els.passwordInput.value = "";
     await verifyAdminAccess(data.user);
     setLoginDisabled(false);
-    els.passwordInput.value = "";
   }
 
   async function handleLogout() {
     clearStatus();
-    await safeSupabaseCall(() => supabaseClient.auth.signOut());
+    await safeSupabaseCall(() => state.client.auth.signOut());
+    state.currentUser = null;
+    state.isAdmin = false;
+    state.records = [];
+    state.importRecords = [];
     showLoginView();
-  }
-
-  async function restoreUser() {
-    const { data, error } = await safeSupabaseCall(() => supabaseClient.auth.getUser());
-    if (error) {
-      showStatus(getFriendlySupabaseError(error), "error");
-      showLoginView();
-      return;
-    }
-
-    if (!data?.user) {
-      showLoginView();
-      return;
-    }
-
-    await verifyAdminAccess(data.user);
   }
 
   async function verifyAdminAccess(user) {
@@ -128,49 +165,421 @@
       return;
     }
 
-    showAdminView();
-    showAccessState("checking", "Checking admin access...", "Please wait while access is verified.");
-
+    showCheckingView();
     const { data, error } = await safeSupabaseCall(() =>
-      supabaseClient
+      state.client
         .from("lenswiki_admins")
-        .select("user_id,email,role")
+        .select("user_id")
         .eq("user_id", user.id)
         .maybeSingle()
     );
 
     if (error) {
-      hideDashboard();
-      showAccessState(
-        "denied",
-        "Could not verify admin access.",
-        "Please try again or contact the site owner."
-      );
+      state.currentUser = null;
+      state.isAdmin = false;
+      showDeniedView("Could not verify admin access.");
       return;
     }
 
-    if (data?.user_id) {
-      showAccessState(
-        "confirmed",
-        "Admin access confirmed.",
-        "Lens editor coming next."
-      );
-      await loadAdminDashboard();
+    if (!data?.user_id) {
+      state.currentUser = user;
+      state.isAdmin = false;
+      showDeniedView("You do not have admin access.");
       return;
     }
 
-    hideDashboard();
-    showAccessState(
-      "denied",
-      "You are logged in, but this account is not authorized for LensWiki admin.",
-      "Contact the site owner if you need curator access."
+    state.currentUser = user;
+    state.isAdmin = true;
+    showDashboardView();
+    await loadAdminDashboard();
+  }
+
+  async function loadAdminDashboard() {
+    if (!state.isAdmin) return;
+
+    els.dashboard.hidden = false;
+    els.supabaseRecordCount.textContent = "Loading...";
+    els.dashboardStatus.textContent = "Loading lens records...";
+    els.recordsList.hidden = true;
+    els.recordsList.innerHTML = "";
+
+    const { data, error, count } = await safeSupabaseCall(() =>
+      state.client
+        .from("lenswiki_records")
+        .select("id,slug,name,manufacturer,year_introduced,status,confidence,data,updated_at", { count: "exact" })
+        .order("updated_at", { ascending: false })
+        .limit(200)
+    );
+
+    if (error) {
+      els.supabaseRecordCount.textContent = "Unavailable";
+      els.dashboardStatus.textContent = "Could not load lens records.";
+      return;
+    }
+
+    state.records = Array.isArray(data) ? data : [];
+    const total = typeof count === "number" ? count : state.records.length;
+    els.supabaseRecordCount.textContent = `${total} ${total === 1 ? "record" : "records"}`;
+
+    if (!state.records.length) {
+      els.dashboardStatus.textContent = "No lens records yet. Use New lens or Import JSON records to begin.";
+      return;
+    }
+
+    els.dashboardStatus.textContent = `Showing ${state.records.length} ${state.records.length === 1 ? "record" : "records"}.`;
+    els.recordsList.hidden = false;
+    els.recordsList.innerHTML = `
+      <div class="records-row records-heading" role="row">
+        <span>Name</span>
+        <span>Maker</span>
+        <span>Year</span>
+        <span>Status</span>
+        <span>Action</span>
+      </div>
+      ${state.records.map(renderRecordRow).join("")}
+    `;
+  }
+
+  function renderRecordRow(record) {
+    const lens = lensFromRecord(record);
+    const status = safeText(record.status) || safeText(lens.status) || "ready";
+    const confidence = safeText(record.confidence) || safeText(lens.confidence);
+    return `
+      <div class="records-row" role="row">
+        <span>${escapeHtml(lens.name || "Untitled lens")}</span>
+        <span>${escapeHtml(lens.manufacturer || "-")}</span>
+        <span>${escapeHtml(lens.yearIntroduced || "-")}</span>
+        <span>${escapeHtml([status, confidence].filter(Boolean).join(" / "))}</span>
+        <span><button class="secondary-button mini" type="button" data-edit-record="${escapeHtml(record.id)}">Edit</button></span>
+      </div>
+    `;
+  }
+
+  function handleRecordListClick(event) {
+    const editButton = event.target.closest("[data-edit-record]");
+    if (!editButton) return;
+    const record = state.records.find((item) => item.id === editButton.dataset.editRecord);
+    if (!record) return;
+    openLensEditor(lensFromRecord(record), "edit");
+  }
+
+  function openLensEditor(lens, mode) {
+    hideImportPanel();
+    clearStatus();
+    const title = mode === "new" ? "New lens" : "Edit lens";
+    els.editorPanel.hidden = false;
+    els.editorPanel.innerHTML = `
+      <form class="lens-admin-form" id="lensAdminForm" data-mode="${escapeHtml(mode)}">
+        <div class="panel-head">
+          <div>
+            <p class="access-kicker">${escapeHtml(title)}</p>
+            <h2>${escapeHtml(lens.name || "Lens record")}</h2>
+          </div>
+          <div class="panel-actions">
+            <button class="primary-button" type="submit">${mode === "new" ? "Create lens" : "Save changes"}</button>
+            <button class="secondary-button" type="button" data-editor-action="cancel">Cancel</button>
+          </div>
+        </div>
+        <div class="form-grid">
+          ${LENS_FIELDS.map((field) => renderEditorField(lens, field)).join("")}
+        </div>
+      </form>
+    `;
+    els.editorPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function renderEditorField(lens, field) {
+    const value = serializeField(lens[field.key], field.type);
+    const required = field.required ? "required" : "";
+    if (field.type === "checkbox") {
+      return `
+        <label class="form-field checkbox-field">
+          <input name="${escapeHtml(field.key)}" type="checkbox" ${lens[field.key] ? "checked" : ""}>
+          <span>${escapeHtml(field.label)}</span>
+        </label>
+      `;
+    }
+
+    if (["textarea", "lines", "structured"].includes(field.type)) {
+      const rows = field.type === "structured" ? 7 : 4;
+      return `
+        <label class="form-field form-field-wide">
+          <span>${escapeHtml(field.label)}</span>
+          <textarea name="${escapeHtml(field.key)}" rows="${rows}" ${required}>${escapeHtml(value)}</textarea>
+          ${getFieldHint(field)}
+        </label>
+      `;
+    }
+
+    return `
+      <label class="form-field">
+        <span>${escapeHtml(field.label)}</span>
+        <input name="${escapeHtml(field.key)}" type="${field.type === "number" ? "number" : "text"}" value="${escapeHtml(value)}" ${required}>
+        ${getFieldHint(field)}
+      </label>
+    `;
+  }
+
+  function getFieldHint(field) {
+    if (field.type === "list") return "<small>Comma-separated values.</small>";
+    if (field.type === "lines") return "<small>One item per line.</small>";
+    if (field.type === "structured") return "<small>Use JSON for structured entries, or one item per line.</small>";
+    if (field.key === "status") return "<small>Use ready or published for public archive visibility.</small>";
+    return "";
+  }
+
+  function handleEditorClick(event) {
+    if (event.target.closest('[data-editor-action="cancel"]')) {
+      closeEditor();
+    }
+  }
+
+  function handleEditorInput(event) {
+    if (!event.target.matches('input[name="name"], input[name="yearIntroduced"], input[name="slug"], input[name="id"]')) return;
+    const form = event.target.closest("form");
+    if (!form || form.dataset.mode !== "new") return;
+
+    const nameInput = form.elements.name;
+    const yearInput = form.elements.yearIntroduced;
+    const slugInput = form.elements.slug;
+    const idInput = form.elements.id;
+    if (!nameInput || !slugInput || !idInput) return;
+
+    const generatedSlug = slugify(nameInput.value);
+    if (!slugInput.value || slugInput.dataset.autogenerated === "true") {
+      slugInput.value = generatedSlug;
+      slugInput.dataset.autogenerated = "true";
+    }
+
+    if (!idInput.value || idInput.dataset.autogenerated === "true") {
+      idInput.value = [yearInput?.value, slugInput.value].filter(Boolean).join("-");
+      idInput.dataset.autogenerated = "true";
+    }
+  }
+
+  async function handleEditorSubmit(event) {
+    if (!event.target.matches("#lensAdminForm")) return;
+    event.preventDefault();
+    if (!state.isAdmin) return;
+
+    const form = event.target;
+    const lens = buildLensFromForm(form);
+    const validationError = validateLensForSave(lens);
+    if (validationError) {
+      showStatus(validationError, "error");
+      return;
+    }
+
+    const submitButton = form.querySelector('button[type="submit"]');
+    setButtonBusy(submitButton, "Saving...");
+
+    const { error } = await upsertLensRecords([lens]);
+    restoreButton(submitButton);
+    if (error) {
+      showStatus("Could not save changes.", "error");
+      return;
+    }
+
+    showStatus(form.dataset.mode === "new" ? "Lens created." : "Lens updated.", "success");
+    closeEditor();
+    await loadAdminDashboard();
+  }
+
+  function buildLensFromForm(form) {
+    const formData = new FormData(form);
+    const lens = {};
+    LENS_FIELDS.forEach((field) => {
+      if (field.type === "checkbox") {
+        lens[field.key] = formData.has(field.key);
+        return;
+      }
+      lens[field.key] = parseFieldValue(safeText(formData.get(field.key)), field.type, field.key);
+    });
+
+    lens.slug = safeText(lens.slug) || slugify(lens.name);
+    lens.id = safeText(lens.id) || [lens.yearIntroduced, lens.slug].filter(Boolean).join("-");
+    lens.fileName = `${lens.id}.json`;
+    lens.status = safeText(lens.status) || "ready";
+    lens.confidence = safeText(lens.confidence) || "needs verification";
+    return lens;
+  }
+
+  function validateLensForSave(lens) {
+    if (!safeText(lens.id)) return "Lens ID is required.";
+    if (!safeText(lens.name)) return "Lens name is required.";
+    const year = Number(lens.yearIntroduced);
+    if (!Number.isFinite(year) || year <= 0) return "Year introduced is required.";
+    return "";
+  }
+
+  function closeEditor() {
+    els.editorPanel.hidden = true;
+    els.editorPanel.innerHTML = "";
+  }
+
+  function openImportPanel() {
+    closeEditor();
+    clearStatus();
+    els.importPanel.hidden = false;
+    els.importStatus.textContent = "Paste JSON or choose a file, then preview the import.";
+    els.importRunButton.disabled = true;
+    state.importRecords = [];
+    els.importPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function hideImportPanel() {
+    els.importPanel.hidden = true;
+    els.importStatus.textContent = "";
+    state.importRecords = [];
+    els.importRunButton.disabled = true;
+  }
+
+  async function handleImportFile(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    els.importTextarea.value = await file.text();
+    previewImport();
+  }
+
+  function previewImport() {
+    try {
+      const records = parseImportPayload(els.importTextarea.value);
+      const invalid = records.find(validateLensForSave);
+      if (invalid) {
+        state.importRecords = [];
+        els.importRunButton.disabled = true;
+        els.importStatus.textContent = validateLensForSave(invalid);
+        return;
+      }
+
+      state.importRecords = records.map(prepareImportedLens);
+      els.importRunButton.disabled = !state.importRecords.length;
+      els.importStatus.textContent = `${state.importRecords.length} ${state.importRecords.length === 1 ? "record" : "records"} ready to import.`;
+    } catch (_error) {
+      state.importRecords = [];
+      els.importRunButton.disabled = true;
+      els.importStatus.textContent = "Could not read that JSON. Check the formatting and try again.";
+    }
+  }
+
+  async function runImport() {
+    if (!state.isAdmin || !state.importRecords.length) return;
+    setButtonBusy(els.importRunButton, "Importing...");
+
+    const { error } = await upsertLensRecords(state.importRecords);
+    restoreButton(els.importRunButton);
+    if (error) {
+      els.importStatus.textContent = "Could not import records.";
+      return;
+    }
+
+    const count = state.importRecords.length;
+    els.importStatus.textContent = `Import complete. ${count} ${count === 1 ? "record was" : "records were"} imported or updated.`;
+    els.importRunButton.disabled = true;
+    state.importRecords = [];
+    await loadAdminDashboard();
+  }
+
+  function parseImportPayload(text) {
+    const payload = JSON.parse(text);
+    let records = [];
+    if (Array.isArray(payload)) {
+      records = payload;
+    } else if (payload && Array.isArray(payload.lenses)) {
+      records = payload.lenses;
+    } else if (payload && typeof payload === "object") {
+      records = [payload];
+    }
+    return records.filter((record) => record && typeof record === "object" && !Array.isArray(record));
+  }
+
+  function prepareImportedLens(lens) {
+    const prepared = { ...lens };
+    prepared.slug = safeText(prepared.slug) || slugify(prepared.name || prepared.id);
+    prepared.id = safeText(prepared.id) || [prepared.yearIntroduced, prepared.slug].filter(Boolean).join("-");
+    prepared.fileName = safeText(prepared.fileName) || `${prepared.id}.json`;
+    prepared.status = safeText(prepared.status) || "ready";
+    prepared.confidence = safeText(prepared.confidence) || "needs verification";
+    return prepared;
+  }
+
+  async function upsertLensRecords(lenses) {
+    const rows = lenses.map((lens) => {
+      const prepared = prepareImportedLens(lens);
+      return {
+        id: prepared.id,
+        slug: prepared.slug,
+        name: prepared.name,
+        manufacturer: safeText(prepared.manufacturer) || null,
+        year_introduced: prepared.yearIntroduced ? String(prepared.yearIntroduced) : null,
+        status: prepared.status,
+        confidence: safeText(prepared.confidence) || null,
+        data: prepared,
+        updated_at: new Date().toISOString(),
+        updated_by: state.currentUser?.id || null
+      };
+    });
+
+    return safeSupabaseCall(() =>
+      state.client
+        .from("lenswiki_records")
+        .upsert(rows, { onConflict: "id" })
+        .select("id")
     );
   }
 
-  function showAdminView() {
+  function lensFromRecord(record) {
+    const data = record.data && typeof record.data === "object" && !Array.isArray(record.data)
+      ? record.data
+      : {};
+    const id = safeText(data.id) || safeText(record.id);
+    const slug = safeText(data.slug) || safeText(record.slug) || slugify(id);
+    return {
+      ...data,
+      id,
+      slug,
+      name: safeText(data.name) || safeText(record.name),
+      manufacturer: safeText(data.manufacturer) || safeText(record.manufacturer),
+      yearIntroduced: data.yearIntroduced || record.year_introduced || "",
+      status: safeText(data.status) || safeText(record.status) || "ready",
+      confidence: safeText(data.confidence) || safeText(record.confidence)
+    };
+  }
+
+  function showCheckingView() {
     els.loginView.hidden = true;
     els.loginForm.hidden = true;
     els.adminView.hidden = false;
+    els.accessCard.hidden = false;
+    els.accessCard.dataset.state = "checking";
+    els.accessKicker.textContent = "Access check";
+    els.accessTitle.textContent = "Checking access...";
+    els.accessCopy.textContent = "Please wait.";
+    hideDashboard();
+  }
+
+  function showDashboardView() {
+    els.loginView.hidden = true;
+    els.loginForm.hidden = true;
+    els.adminView.hidden = false;
+    els.accessCard.hidden = false;
+    els.accessCard.dataset.state = "confirmed";
+    els.accessKicker.textContent = "Admin";
+    els.accessTitle.textContent = "Access granted.";
+    els.accessCopy.textContent = "Manage lens records.";
+    els.dashboard.hidden = false;
+  }
+
+  function showDeniedView(message) {
+    els.loginView.hidden = true;
+    els.loginForm.hidden = true;
+    els.adminView.hidden = false;
+    els.accessCard.hidden = false;
+    els.accessCard.dataset.state = "denied";
+    els.accessKicker.textContent = "Access";
+    els.accessTitle.textContent = message;
+    els.accessCopy.textContent = "";
+    hideDashboard();
   }
 
   function showLoginView(options = {}) {
@@ -180,50 +589,9 @@
     els.adminView.hidden = true;
     els.accessCard.hidden = true;
     hideDashboard();
+    closeEditor();
+    hideImportPanel();
     setLoginDisabled(disabled);
-  }
-
-  async function loadAdminDashboard() {
-    els.dashboard.hidden = false;
-    els.supabaseRecordCount.textContent = "Loading...";
-    els.dashboardStatus.textContent = "Loading lens records...";
-    els.recordsList.hidden = true;
-    els.recordsList.innerHTML = "";
-
-    const { data, error, count } = await safeSupabaseCall(() =>
-      supabaseClient
-        .from("lenswiki_records")
-        .select("name,manufacturer,status,updated_at", { count: "exact" })
-        .order("updated_at", { ascending: false })
-        .limit(10)
-    );
-
-    if (error) {
-      els.supabaseRecordCount.textContent = "Unavailable";
-      els.dashboardStatus.textContent = "Could not load lens records. Please try again or contact the site owner.";
-      return;
-    }
-
-    const records = Array.isArray(data) ? data : [];
-    const total = typeof count === "number" ? count : records.length;
-    els.supabaseRecordCount.textContent = `${total} ${total === 1 ? "record" : "records"}`;
-
-    if (records.length === 0) {
-      els.dashboardStatus.textContent = "No lens records yet. Import existing JSON records next.";
-      return;
-    }
-
-    els.dashboardStatus.textContent = `Showing ${records.length} recent ${records.length === 1 ? "record" : "records"}.`;
-    els.recordsList.hidden = false;
-    els.recordsList.innerHTML = `
-      <div class="records-row records-heading" role="row">
-        <span>Name</span>
-        <span>Manufacturer</span>
-        <span>Status</span>
-        <span>Updated</span>
-      </div>
-      ${records.map(renderRecordRow).join("")}
-    `;
   }
 
   function hideDashboard() {
@@ -232,14 +600,6 @@
     els.dashboardStatus.textContent = "";
     els.recordsList.hidden = true;
     els.recordsList.innerHTML = "";
-  }
-
-  function showAccessState(state, title, copy) {
-    els.accessCard.hidden = false;
-    els.accessCard.dataset.state = state;
-    els.accessKicker.textContent = state === "confirmed" ? "Admin session active" : "Access check";
-    els.accessTitle.textContent = title;
-    els.accessCopy.textContent = copy;
   }
 
   function showStatus(message, tone = "info") {
@@ -260,9 +620,74 @@
     els.loginButton.disabled = disabled;
   }
 
+  function setButtonBusy(button, label) {
+    if (!button) return;
+    button.dataset.originalText = button.textContent;
+    button.textContent = label;
+    button.disabled = true;
+  }
+
+  function restoreButton(button) {
+    if (!button) return;
+    button.textContent = button.dataset.originalText || button.textContent;
+    button.disabled = false;
+    delete button.dataset.originalText;
+  }
+
+  function serializeField(value, type) {
+    if (!hasValue(value)) return "";
+    if (type === "list") return asArray(value).map(formatListItem).join(", ");
+    if (type === "lines") return asArray(value).map(formatListItem).join("\n");
+    if (type === "structured") {
+      const items = asArray(value);
+      if (items.some((item) => item && typeof item === "object")) {
+        return JSON.stringify(items, null, 2);
+      }
+      return items.map(formatListItem).join("\n");
+    }
+    return String(value);
+  }
+
+  function parseFieldValue(value, type, key) {
+    if (type === "number") {
+      if (!value.trim()) return "";
+      const number = Number(value);
+      return Number.isFinite(number) ? number : "";
+    }
+    if (type === "list") return splitCommaList(value);
+    if (type === "lines") return splitLines(value);
+    if (type === "structured") return parseStructuredValue(value, key);
+    return value;
+  }
+
+  function parseStructuredValue(value, key) {
+    if (!value.trim()) return [];
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [parsed];
+    } catch (_error) {
+      return ["sources", "famousUses"].includes(key) ? splitLines(value) : splitLines(value);
+    }
+  }
+
+  function createEmptyLens() {
+    return {
+      id: "",
+      slug: "",
+      name: "",
+      manufacturer: "",
+      yearIntroduced: "",
+      yearApproximate: false,
+      status: "ready",
+      confidence: "needs verification",
+      type: [],
+      characteristics: []
+    };
+  }
+
   function isMissingConfig(currentConfig) {
     return [currentConfig.url, currentConfig.anonKey].some((value) => {
-      const normalized = String(value || "").trim();
+      const normalized = safeText(value);
       return !normalized || normalized.includes("YOUR_SUPABASE_");
     });
   }
@@ -284,41 +709,58 @@
     }
   }
 
-  function getFriendlySupabaseError(error) {
-    const message = String(error?.message || error || "Unknown Supabase error");
-    if (message.toLowerCase().includes("failed to fetch") || error instanceof TypeError) {
-      return "Could not reach the admin service. Check your connection or try again later.";
+  function getFriendlyLoginError(error) {
+    const message = String(error?.message || "").toLowerCase();
+    if (message.includes("failed to fetch") || error instanceof TypeError) {
+      return "Could not reach the admin service. Check your connection and try again.";
     }
-
-    return message;
+    return "Login failed. Check your email and password.";
   }
 
-  function renderRecordRow(record) {
-    return `
-      <div class="records-row" role="row">
-        <span>${escapeHtml(record.name || "Untitled lens")}</span>
-        <span>${escapeHtml(record.manufacturer || "-")}</span>
-        <span>${escapeHtml(record.status || "draft")}</span>
-        <span>${escapeHtml(formatDate(record.updated_at))}</span>
-      </div>
-    `;
+  function asArray(value) {
+    if (Array.isArray(value)) return value.filter(hasValue);
+    if (typeof value === "string") return value.split(",").map((item) => item.trim()).filter(Boolean);
+    return [];
   }
 
-  function formatDate(value) {
-    if (!value) {
-      return "-";
-    }
+  function splitCommaList(value) {
+    return safeText(value).split(",").map((item) => item.trim()).filter(Boolean);
+  }
 
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) {
-      return String(value);
-    }
+  function splitLines(value) {
+    return safeText(value).split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
+  }
 
-    return date.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+  function formatListItem(item) {
+    if (!item || typeof item !== "object") return safeText(item);
+    return Object.entries(item)
+      .filter(([, value]) => hasValue(value))
+      .map(([key, value]) => `${labelFromKey(key)}: ${Array.isArray(value) ? value.join(", ") : value}`)
+      .join(" · ");
+  }
+
+  function labelFromKey(key) {
+    return key.replace(/([A-Z])/g, " $1").replace(/^./, (letter) => letter.toUpperCase());
+  }
+
+  function hasValue(value) {
+    if (Array.isArray(value)) return value.length > 0;
+    return value !== null && value !== undefined && value !== "";
+  }
+
+  function safeText(value, fallback = "") {
+    if (value === null || value === undefined) return fallback;
+    const text = String(value).trim();
+    return text || fallback;
+  }
+
+  function slugify(value) {
+    return safeText(value)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
   }
 
   function escapeHtml(value) {
@@ -328,7 +770,7 @@
         "<": "&lt;",
         ">": "&gt;",
         '"': "&quot;",
-        "'": "&#039;",
+        "'": "&#039;"
       };
       return entities[char];
     });

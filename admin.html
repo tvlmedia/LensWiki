@@ -6,7 +6,7 @@
     <title>LensWiki Admin</title>
     <meta name="robots" content="noindex">
     <!-- Bump admin asset version after changing admin JS/config. -->
-    <link rel="stylesheet" href="admin.css?v=20260527-5">
+    <link rel="stylesheet" href="admin.css?v=20260527-6">
   </head>
   <body>
     <header class="admin-topbar">
@@ -46,7 +46,7 @@
           <section class="access-card" id="adminAccessCard">
             <p class="access-kicker" id="accessKicker">Admin session active</p>
             <h2 id="accessTitle">Admin access confirmed.</h2>
-            <p id="accessCopy">Lens editor coming next.</p>
+            <p id="accessCopy">Manage lens records.</p>
           </section>
 
           <section class="admin-dashboard" id="adminDashboard">
@@ -59,19 +59,43 @@
             </div>
 
             <p class="dashboard-status" id="dashboardStatus">Loading lens records...</p>
-            <div class="records-table" id="supabaseRecordsList" hidden></div>
 
             <div class="dashboard-actions">
               <div>
-                <button class="secondary-button" type="button" disabled>Import JSON records</button>
-                <p>Import tool coming next.</p>
+                <button class="secondary-button" id="importButton" type="button">Import JSON records</button>
+                <p>Upload or paste exported LensWiki JSON records.</p>
               </div>
               <div>
-                <button class="secondary-button" type="button" disabled>New lens</button>
-                <p>Lens editor coming next.</p>
+                <button class="secondary-button" id="newLensButton" type="button">New lens</button>
+                <p>Create a curated lens record directly.</p>
               </div>
             </div>
 
+            <section class="editor-panel" id="editorPanel" hidden></section>
+
+            <section class="import-panel" id="importPanel" hidden>
+              <div class="panel-head">
+                <div>
+                  <p class="access-kicker">Import</p>
+                  <h2>Import JSON records</h2>
+                </div>
+              </div>
+              <label class="form-field">
+                JSON file
+                <input id="importFile" type="file" accept=".json,application/json">
+              </label>
+              <label class="form-field form-field-wide">
+                JSON payload
+                <textarea id="importTextarea" rows="8" placeholder='[{"id":"1893-cooke-triplet","name":"Cooke Triplet","yearIntroduced":1893}]'></textarea>
+              </label>
+              <div class="panel-actions">
+                <button class="secondary-button" id="importPreviewButton" type="button">Preview import</button>
+                <button class="primary-button" id="importRunButton" type="button" disabled>Import records</button>
+              </div>
+              <p class="dashboard-status" id="importStatus"></p>
+            </section>
+
+            <div class="records-table" id="supabaseRecordsList" hidden></div>
           </section>
 
           <div class="dashboard-footer">
@@ -82,7 +106,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js?v=20260527-5"></script>
-    <script src="admin.js?v=20260527-5" defer></script>
+    <script src="supabase-config.js?v=20260527-6"></script>
+    <script src="admin.js?v=20260527-6" defer></script>
   </body>
 </html>

@@ -1,6 +1,6 @@
 # LensWiki Admin Login Setup
 
-The admin login page is a static GitHub Pages page that uses Supabase Auth. It only checks whether the logged-in user exists in `public.lenswiki_admins`; it does not include the lens editor yet.
+The admin login page is a static GitHub Pages page that uses Supabase Auth. It checks whether the logged-in user exists in `public.lenswiki_admins`, then shows the LensWiki record dashboard.
 
 ## Configure Supabase
 

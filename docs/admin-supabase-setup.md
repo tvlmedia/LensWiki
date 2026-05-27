@@ -1,6 +1,6 @@
 # LensWiki Supabase Admin Setup
 
-LensWiki will keep the public GitHub Pages site on curated JSON files for now. This Supabase foundation is only for a future private admin workflow.
+LensWiki keeps curated JSON files as the base archive and uses Supabase for the private admin workflow. Published or ready Supabase records can also be read by the public archive through Row Level Security.
 
 ## Shared Project Setup
 
@@ -41,15 +41,15 @@ Only users listed in `public.lenswiki_admins` should be able to manage private L
 - Browser code may only use the anon/public/publishable key, with Row Level Security enabled.
 - Admin editing must happen only after login.
 - Public reads from Supabase should only expose records where `status` is `published` or `ready`.
-- The public LensWiki site still loads from `data/lenses/` JSON files for now. Do not migrate public loading to Supabase until the admin UI and publishing workflow are ready.
+- The public LensWiki site still loads curated JSON files and can overlay published or ready Supabase records.
 
 ## What This Adds
 
 The migration prepares:
 
 - Admin membership through `public.lenswiki_admins`
-- Future editable lens records in `public.lenswiki_records`
+- Editable lens records in `public.lenswiki_records`
 - Audit/edit history in `public.lenswiki_record_edits`
 - RLS policies that keep public access read-only and limited to published/ready records
 
-No admin UI, Supabase keys, or public-site data-loading changes are included in this step.
+The browser UI must only use the anon/public/publishable key. Never use service role keys outside trusted server-side tooling.

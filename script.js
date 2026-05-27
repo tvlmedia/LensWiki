@@ -35,6 +35,7 @@ const ADMIN_EDIT_FIELDS = [
   { key: "name", label: "Lens name", type: "text" },
   { key: "yearIntroduced", label: "Year introduced", type: "number" },
   { key: "yearApproximate", label: "Approximate year", type: "checkbox" },
+  { key: "status", label: "Publication status", type: "text" },
   { key: "importance", label: "Importance", type: "text" },
   { key: "confidence", label: "Confidence", type: "text" },
   { key: "timelineCategory", label: "Timeline category", type: "text" },
@@ -223,20 +224,15 @@ function bindEvents() {
 }
 
 async function initAdminSession() {
-  const url = window.LENSWIKI_SUPABASE_URL || "";
-  const anonKey = window.LENSWIKI_SUPABASE_ANON_KEY || "";
-  if (!window.supabase?.createClient || isMissingSupabaseConfig(url, anonKey)) {
-    return;
-  }
+  const client = getSupabaseClient();
+  if (!client) return;
 
-  state.admin.client = window.supabase.createClient(url, anonKey);
-
-  const sessionResult = await safeSupabaseCall(() => state.admin.client.auth.getSession());
+  const sessionResult = await safeSupabaseCall(() => client.auth.getSession());
   if (sessionResult.data?.session?.user) {
     await verifyLensWikiAdmin(sessionResult.data.session.user);
   }
 
-  state.admin.client.auth.onAuthStateChange((_event, session) => {
+  client.auth.onAuthStateChange((_event, session) => {
     if (session?.user) {
       verifyLensWikiAdmin(session.user);
       return;
@@ -245,6 +241,18 @@ async function initAdminSession() {
     state.admin.isAdmin = false;
     rerenderActiveLens();
   });
+}
+
+function getSupabaseClient() {
+  if (state.admin.client) return state.admin.client;
+  const url = window.LENSWIKI_SUPABASE_URL || "";
+  const anonKey = window.LENSWIKI_SUPABASE_ANON_KEY || "";
+  if (!window.supabase?.createClient || isMissingSupabaseConfig(url, anonKey)) {
+    return null;
+  }
+
+  state.admin.client = window.supabase.createClient(url, anonKey);
+  return state.admin.client;
 }
 
 async function verifyLensWikiAdmin(user) {
@@ -289,6 +297,7 @@ async function loadLensLibrary() {
   };
 
   let entries = [];
+  let githubError = "";
   try {
     const response = await fetch(GITHUB_LENSES_API, {
       cache: "no-store",
@@ -302,46 +311,97 @@ async function loadLensLibrary() {
     entries = await response.json();
   } catch (error) {
     console.warn("LensWiki: could not load GitHub directory listing for data/lenses/.", error);
-    return { lenses: [], status, error: LIBRARY_LOAD_ERROR };
+    githubError = LIBRARY_LOAD_ERROR;
   }
 
-  if (!Array.isArray(entries)) {
+  const lensesById = new Map();
+
+  if (entries && !Array.isArray(entries)) {
     console.warn("LensWiki: GitHub directory listing was not an array.", entries);
-    return { lenses: [], status, error: LIBRARY_LOAD_ERROR };
+    githubError = LIBRARY_LOAD_ERROR;
   }
 
-  const jsonEntries = entries.filter((entry) => entry.type === "file" && entry.name.toLowerCase().endsWith(".json"));
-  status.discoveredJsonFiles = jsonEntries.length;
+  if (Array.isArray(entries)) {
+    const jsonEntries = entries.filter((entry) => entry.type === "file" && entry.name.toLowerCase().endsWith(".json"));
+    status.discoveredJsonFiles = jsonEntries.length;
 
-  jsonEntries.forEach(validateFileName);
+    jsonEntries.forEach(validateFileName);
 
-  const results = await Promise.all(jsonEntries.map(loadLensFile));
-  const seenIds = new Set();
-  const lenses = [];
+    const results = await Promise.all(jsonEntries.map(loadLensFile));
 
-  results.forEach((result) => {
-    if (result.failed) {
-      status.failedFiles += 1;
-      return;
-    }
-
-    status.loadedFiles += 1;
-    result.lenses.forEach((lens) => {
-      if (!isValidLens(lens, result.fileName)) return;
-      warnIfIdDoesNotMatchFile(lens.id, result.fileName);
-      const normalized = normalizeLens(lens, result.fileName);
-      if (seenIds.has(normalized.id)) {
-        console.warn(`LensWiki: duplicate lens id "${normalized.id}" in ${result.fileName}. Keeping the first record.`);
+    results.forEach((result) => {
+      if (result.failed) {
+        status.failedFiles += 1;
         return;
       }
-      seenIds.add(normalized.id);
-      lenses.push(normalized);
+
+      status.loadedFiles += 1;
+      result.lenses.forEach((lens) => {
+        if (!isValidLens(lens, result.fileName)) return;
+        warnIfIdDoesNotMatchFile(lens.id, result.fileName);
+        const normalized = normalizeLens(lens, result.fileName);
+        if (lensesById.has(normalized.id)) {
+          console.warn(`LensWiki: duplicate lens id "${normalized.id}" in ${result.fileName}. Keeping the first record.`);
+          return;
+        }
+        lensesById.set(normalized.id, normalized);
+      });
     });
+  }
+
+  const supabaseLenses = await loadSupabaseLensRecords();
+  supabaseLenses.forEach((lens) => {
+    const fileName = safeText(lens.fileName) || `${safeText(lens.id, "lenswiki-record")}.json`;
+    if (!isValidLens(lens, fileName)) return;
+    lensesById.set(lens.id, normalizeLens(lens, fileName));
   });
 
+  const lenses = Array.from(lensesById.values());
   lenses.sort(sortByYearThenImportance);
   status.importedRecords = lenses.length;
-  return { lenses, status, error: "" };
+  return { lenses, status, error: lenses.length ? "" : githubError };
+}
+
+async function loadSupabaseLensRecords() {
+  const client = getSupabaseClient();
+  if (!client) return [];
+
+  const { data, error } = await safeSupabaseCall(() =>
+    client
+      .from("lenswiki_records")
+      .select("id,slug,name,manufacturer,year_introduced,status,confidence,data,updated_at")
+      .order("year_introduced", { ascending: true })
+  );
+
+  if (error) {
+    console.warn("LensWiki: could not load admin lens records.", error);
+    return [];
+  }
+
+  return (Array.isArray(data) ? data : []).map(lensFromSupabaseRecord).filter(Boolean);
+}
+
+function lensFromSupabaseRecord(record) {
+  if (!record || typeof record !== "object") return null;
+  const data = record.data && typeof record.data === "object" && !Array.isArray(record.data)
+    ? record.data
+    : {};
+  const id = safeText(data.id) || safeText(record.id);
+  if (!id) return null;
+
+  const slug = safeText(data.slug) || safeText(record.slug) || slugify(id);
+  const yearIntroduced = numberOrNull(data.yearIntroduced) ?? numberOrNull(record.year_introduced);
+  return {
+    ...data,
+    id,
+    slug,
+    fileName: safeText(data.fileName) || `${slug}.json`,
+    name: safeText(data.name) || safeText(record.name),
+    manufacturer: safeText(data.manufacturer) || safeText(record.manufacturer),
+    yearIntroduced,
+    status: safeText(data.status) || safeText(record.status),
+    confidence: safeText(data.confidence) || safeText(record.confidence)
+  };
 }
 
 async function loadLensFile(entry) {
@@ -441,6 +501,7 @@ function normalizeLens(lens, fileName) {
     designer: safeText(lens.designer),
     yearIntroduced: numberOrNull(lens.yearIntroduced),
     yearApproximate: Boolean(lens.yearApproximate),
+    status: safeText(lens.status),
     productionYears: safeText(lens.productionYears),
     country: safeText(lens.country),
     factoryLocation: safeText(lens.factoryLocation),
@@ -534,7 +595,7 @@ function renderArchive() {
     els.timelineViewport.innerHTML = `
       <div class="empty-state empty-library">
         <h3>No lens records yet.</h3>
-        <p>Curated lens records, source notes and archive corrections are coming soon.</p>
+        <p>The archive is ready for curated lens records.</p>
       </div>
     `;
     return;
@@ -977,20 +1038,21 @@ async function saveLensToSupabase(lens) {
       .eq("id", lens.id)
       .maybeSingle()
   );
-  const status = existing.data?.status || "draft";
+  const status = safeText(lens.status) || safeText(existing.data?.status) || "ready";
+  const storedLens = { ...lens, status };
 
   return safeSupabaseCall(() =>
     state.admin.client
       .from("lenswiki_records")
       .upsert({
-        id: lens.id,
-        slug: lens.slug || slugify(lens.id),
-        name: lens.name,
-        manufacturer: lens.manufacturer || null,
-        year_introduced: lens.yearIntroduced ? String(lens.yearIntroduced) : null,
+        id: storedLens.id,
+        slug: storedLens.slug || slugify(storedLens.id),
+        name: storedLens.name,
+        manufacturer: storedLens.manufacturer || null,
+        year_introduced: storedLens.yearIntroduced ? String(storedLens.yearIntroduced) : null,
         status,
-        confidence: lens.confidence || null,
-        data: lens,
+        confidence: storedLens.confidence || null,
+        data: storedLens,
         updated_at: new Date().toISOString()
       }, { onConflict: "id" })
       .select("id")

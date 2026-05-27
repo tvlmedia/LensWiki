@@ -1,5 +1,5 @@
 -- LensWiki admin foundation for a shared Supabase project.
--- Public JSON loading remains unchanged; these tables are for a future private admin UI.
+-- Public JSON loading remains the base archive; these tables power the private admin workflow.
 
 create table if not exists public.lenswiki_admins (
   user_id uuid primary key references auth.users(id) on delete cascade,
