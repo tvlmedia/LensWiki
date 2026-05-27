@@ -312,6 +312,8 @@ main {
 }
 
 .timeline-section,
+.contribute-section,
+.site-footer,
 .research-tools {
   width: min(var(--max), calc(100% - 32px));
   margin: 0 auto;
@@ -913,6 +915,36 @@ button.dense-row:hover {
 .research-tools-body p {
   margin: 16px 0;
   color: var(--muted);
+}
+
+.contribute-section {
+  padding: 10px 0 42px;
+}
+
+.contribute-section h2 {
+  max-width: 760px;
+  margin-bottom: 10px;
+}
+
+.contribute-section p:not(.eyebrow) {
+  max-width: 720px;
+  color: var(--muted);
+}
+
+.site-footer {
+  padding: 26px 0 40px;
+  color: var(--subtle);
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.site-footer p {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 .detail-drawer {

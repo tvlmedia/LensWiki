@@ -1,5 +1,5 @@
 const GITHUB_LENSES_API = "https://api.github.com/repos/tvlmedia/LensWiki/contents/data/lenses?ref=main";
-const LIBRARY_LOAD_ERROR = "Could not load LensWiki library. Check the GitHub Contents API for /data/lenses/.";
+const LIBRARY_LOAD_ERROR = "Could not load LensWiki records. Try refreshing the page.";
 
 const IMPORTANCE_ORDER = {
   legendary: 0,
@@ -116,7 +116,9 @@ function bindEvents() {
     renderArchive();
   });
 
-  els.exportJson.addEventListener("click", exportJson);
+  if (els.exportJson) {
+    els.exportJson.addEventListener("click", exportJson);
+  }
 
   els.detailDrawer.addEventListener("click", (event) => {
     if (event.target.closest("[data-close-drawer]")) {
@@ -361,10 +363,9 @@ function renderStats() {
 
 function renderLibraryStatus() {
   const { loadedFiles, failedFiles, importedRecords } = state.libraryStatus;
-  const fileLabel = loadedFiles === 1 ? "JSON file" : "JSON files";
-  const recordLabel = importedRecords === 1 ? "lens record" : "lens records";
-  const failedText = failedFiles ? ` · ${failedFiles} failed` : "";
-  els.libraryStatus.textContent = `${loadedFiles} ${fileLabel} loaded · ${importedRecords} ${recordLabel} imported${failedText}`;
+  const recordLabel = importedRecords === 1 ? "curated lens record" : "curated lens records";
+  const failedText = failedFiles ? ` · ${failedFiles} could not be loaded` : "";
+  els.libraryStatus.textContent = `${importedRecords} ${recordLabel} loaded${failedText}`;
   els.libraryStatus.classList.toggle("has-failures", failedFiles > 0 || Boolean(state.loadError));
 }
 
@@ -385,14 +386,14 @@ function renderArchive() {
     els.timelineViewport.innerHTML = `
       <div class="empty-state empty-library">
         <h3>No lens records yet.</h3>
-        <p>LensWiki is a curated JSON-based library. Add standalone lens JSON files to /data/lenses/ to build the archive.</p>
+        <p>Curated lens records, source notes and archive corrections are coming soon.</p>
       </div>
     `;
     return;
   }
 
   if (!lenses.length) {
-    els.timelineViewport.innerHTML = '<div class="empty-state">No lenses found. Clear filters or check the JSON library.</div>';
+    els.timelineViewport.innerHTML = '<div class="empty-state">No lenses found. Clear filters or adjust your search.</div>';
     return;
   }
 
@@ -411,7 +412,7 @@ function renderDataStatus() {
     els.dataStatus.textContent = state.loadError;
   } else if (state.libraryStatus.failedFiles > 0) {
     els.dataStatus.hidden = false;
-    els.dataStatus.textContent = `${state.libraryStatus.failedFiles} JSON file could not be loaded or parsed. Valid records are still shown.`;
+    els.dataStatus.textContent = `${state.libraryStatus.failedFiles} lens record could not be loaded. Valid records are still shown.`;
   } else {
     els.dataStatus.hidden = true;
     els.dataStatus.textContent = "";

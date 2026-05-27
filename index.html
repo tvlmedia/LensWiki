@@ -3,36 +3,35 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Cinema Lens Timeline</title>
+    <title>LensWiki | The Cinema Lens Archive</title>
     <meta
       name="description"
-      content="A chronological archive of cinema lenses, optical history, rehousings, design families and sample footage."
+      content="A curated archive of cinema lenses, optical history, rehousings, design families, look characteristics and real-world use."
     >
-    <link rel="stylesheet" href="style.css?v=hero-batch">
+    <link rel="stylesheet" href="style.css?v=branding-cleanup">
   </head>
   <body>
     <header class="site-hero" id="top">
       <nav class="topbar" aria-label="Primary navigation">
-        <a class="brand" href="#top" aria-label="Cinema Lens Timeline home">
+        <a class="brand" href="#top" aria-label="LensWiki home">
           <span class="brand-mark" aria-hidden="true"></span>
-          <span>Lenspedia</span>
+          <span>LensWiki</span>
         </a>
         <div class="nav-actions">
           <a href="#timeline">Archive</a>
-          <a href="#developer-tools">Developer Tools</a>
-          <a href="docs/adding-lenses.md">Adding Lenses</a>
+          <a href="#contribute">Contribute</a>
         </div>
       </nav>
 
       <div class="hero-content">
-        <p class="eyebrow">Chronological cinema optics archive</p>
-        <h1>Cinema Lens Timeline</h1>
+        <p class="eyebrow">Cinema optics, history & look reference</p>
+        <h1>The Cinema Lens Archive</h1>
         <p class="hero-subtitle">
-          A visual archive of cinema lenses, optical history, rehousings,
-          design families and sample footage.
+          A curated archive of cinema lenses, optical history, rehousings,
+          design families, look characteristics and real-world use.
         </p>
         <p class="library-copy">
-          LensWiki is powered by manually curated JSON records. Every lens entry is a standalone file in the GitHub library.
+          Built for cinematographers, rental houses, collectors and lens researchers.
         </p>
       </div>
 
@@ -122,37 +121,25 @@
         </div>
 
         <div class="data-status" id="dataStatus" hidden></div>
-        <div class="library-status" id="libraryStatus">Loading JSON library...</div>
+        <div class="library-status" id="libraryStatus">Loading lens records...</div>
         <div class="era-strip" id="eraStrip" aria-label="Decade shortcuts"></div>
         <div class="timeline-viewport" id="timelineViewport" aria-live="polite"></div>
       </section>
 
-      <section class="research-tools" id="developer-tools">
-        <details>
-          <summary>
-            <span>
-              <span class="eyebrow">Developer Tools</span>
-              <strong>Curated JSON library</strong>
-            </span>
-            <span class="summary-hint">Open tools</span>
-          </summary>
-
-          <div class="research-tools-body">
-            <p>LensWiki is a curated JSON-based library. New lenses are added manually through GitHub.</p>
-            <p>
-              Add one standalone JSON file under <code>data/lenses/</code>. The site discovers JSON files
-              through the GitHub Contents API and ignores templates, schemas and non-JSON files.
-            </p>
-            <div class="workbench-actions">
-              <a class="secondary-button" href="data/templates/lens-template.json">Lens template</a>
-              <a class="secondary-button" href="data/schemas/lens.schema.json">Lens schema</a>
-              <a class="secondary-button" href="docs/adding-lenses.md">Adding guide</a>
-              <button class="secondary-button" id="exportJson" type="button">Export JSON</button>
-            </div>
-          </div>
-        </details>
+      <section class="contribute-section" id="contribute">
+        <p class="eyebrow">Contribute</p>
+        <h2>Lens submissions and corrections are coming soon.</h2>
+        <p>
+          LensWiki will open a careful submission workflow for sourced corrections,
+          missing lenses, usage notes and archive improvements.
+        </p>
       </section>
     </main>
+
+    <footer class="site-footer">
+      <p>LensWiki is a curated cinema lens archive by TVL Media.</p>
+      <p>Corrections and lens submissions coming soon.</p>
+    </footer>
 
     <aside class="detail-drawer" id="detailDrawer" aria-hidden="true" aria-label="Lens detail panel">
       <div class="drawer-backdrop" data-close-drawer></div>
@@ -164,6 +151,6 @@
       </article>
     </aside>
 
-    <script src="script.js?v=hero-batch" defer></script>
+    <script src="script.js?v=branding-cleanup" defer></script>
   </body>
 </html>
