@@ -1875,6 +1875,10 @@ button.dense-row:hover {
   background: #000;
 }
 
+.youtube-thumb.is-thumbnail-missing {
+  background: #06080c;
+}
+
 .youtube-thumb img {
   width: 100%;
   height: 100%;

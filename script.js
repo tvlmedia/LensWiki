@@ -46,14 +46,17 @@ const NORMALIZED_ARRAY_FIELDS = new Set([
   "focalLengthSpecs"
 ]);
 const VIDEO_SAMPLE_FIELDS = [
+  "sampleFootage",
+  "sampleVideos",
+  "youtubeEmbeds",
+  "videos",
+  "media",
+  "links",
   "youtubeSamples",
   "videoSamples",
-  "videos",
   "videoLinks",
-  "sampleFootage",
   "sampleFootageLinks",
-  "footageSamples",
-  "youtubeEmbeds"
+  "footageSamples"
 ];
 const COMMA_ARRAY_FIELDS = new Set(["mounts", "focalLengths", "tStops", "type"]);
 const LINE_ARRAY_FIELDS = new Set(["strengths", "weaknesses", "characteristics", "closeFocus", "formatCoverageNotes"]);
@@ -1801,6 +1804,10 @@ function createYoutubeSection(lensOrSamples) {
       <img src="${escapeHtml(sample.thumbnailUrl)}" alt="" loading="lazy">
       <span class="youtube-play" aria-hidden="true">Play</span>
     `;
+    thumb.querySelector("img")?.addEventListener("error", () => {
+      thumb.classList.add("is-thumbnail-missing");
+      thumb.querySelector("img")?.remove();
+    });
 
     card.append(thumb);
     if (sample.label || sample.platform) {
