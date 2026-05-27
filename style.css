@@ -1108,6 +1108,17 @@ button.dense-row:hover {
   font-size: 0.9rem;
 }
 
+.footer-admin-link {
+  color: var(--subtle);
+  font-size: 0.82rem;
+  opacity: 0.72;
+}
+
+.footer-admin-link:hover {
+  color: var(--muted);
+  opacity: 1;
+}
+
 .detail-drawer {
   position: fixed;
   inset: 0;
