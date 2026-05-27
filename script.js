@@ -1573,7 +1573,7 @@ async function saveNewLens(form) {
 
   const saveResult = await saveLensToSupabase(lens);
   if (saveResult.error) {
-    setNewLensMessage("error", "Could not save new lens. Please try again.");
+    setNewLensMessage("error", saveResult.message || "Could not save new lens. Please try again.");
     rerenderActiveLens();
     return;
   }
@@ -1707,6 +1707,8 @@ function renderLensEditForm(lens) {
     state.editDraft = createPublicEditDraft(lens);
   }
   const draft = state.editDraft;
+  const draftLens = buildUpdatedLensFromDraft(lens, draft);
+  const draftValidation = validateLensNestedData(draftLens);
   const form = document.createElement("form");
   form.className = "lens-edit-form";
   form.id = "lensEditForm";
@@ -1716,7 +1718,7 @@ function renderLensEditForm(lens) {
       <p class="eyebrow">Update lens</p>
       <h2 id="drawerTitle">${escapeHtml(draft.values.name || lens.name)}</h2>
       <div class="admin-lens-actions">
-        <button class="primary-button small" type="submit">Save changes</button>
+        <button class="primary-button small" type="submit" ${draftValidation.blocking.length ? "disabled" : ""}>Save changes</button>
         <button class="secondary-button small" type="button" data-drawer-action="add-new-lens">Add New Lens</button>
         <button class="secondary-button small" type="button" data-drawer-action="copy-json">Copy JSON</button>
         <button class="secondary-button small" type="button" data-drawer-action="paste-json">Paste JSON</button>
@@ -1729,6 +1731,7 @@ function renderLensEditForm(lens) {
     ${state.drawerMessage ? `
       <p class="drawer-message ${escapeHtml(state.drawerMessage.tone || "")}">${escapeHtml(state.drawerMessage.text)}</p>
     ` : ""}
+    ${draftValidation.summary.length || draftValidation.blocking.length ? renderLensNestedValidation(draftValidation) : ""}
     ${draft.autosavedValues ? `
       <div class="draft-restore">
         <p>Unsaved draft found. Restore draft?</p>
@@ -1771,6 +1774,9 @@ function renderJsonPatchPanel(patchState) {
   const warnings = patchState.warnings?.length
     ? `<p class="json-patch-error">${escapeHtml(patchState.warnings.join(" "))}</p>`
     : "";
+  const blocking = patchState.blockingWarnings?.length
+    ? `<p class="json-patch-error">${escapeHtml(patchState.blockingWarnings.join(" "))}</p>`
+    : "";
 
   return `
     <section class="json-patch-panel">
@@ -1784,6 +1790,7 @@ function renderJsonPatchPanel(patchState) {
       <p class="json-patch-note">You can paste either a full lens JSON object or a partial patch. Nested objects and arrays are preserved.</p>
       <textarea data-json-patch-input rows="8" placeholder='"focalLengths": ["16mm", "20mm"]'>${escapeHtml(patchState.raw || "")}</textarea>
       ${patchState.error ? `<p class="json-patch-error">${escapeHtml(patchState.error)}</p>` : ""}
+      ${blocking}
       ${warnings}
       ${typeSummary}
       ${previewRows}
@@ -1805,6 +1812,7 @@ function openPublicJsonPatchPanel() {
     error: "",
     typeSummary: [],
     warnings: [],
+    blockingWarnings: [],
     patchLens: null
   };
   rerenderActiveLens();
@@ -1834,6 +1842,7 @@ function evaluatePublicJsonPatch(options = {}) {
     patchState.patchLens = null;
     patchState.typeSummary = [];
     patchState.warnings = [];
+    patchState.blockingWarnings = [];
     return false;
   }
 
@@ -1848,6 +1857,7 @@ function evaluatePublicJsonPatch(options = {}) {
   patchState.patchLens = prepared.patchLens;
   patchState.typeSummary = prepared.typeSummary;
   patchState.warnings = prepared.warnings;
+  patchState.blockingWarnings = prepared.blockingWarnings;
   return Boolean(prepared.preview.length);
 }
 
@@ -1860,6 +1870,7 @@ function applyPublicJsonPatch() {
 
   const patchLens = state.editDraft.jsonPatch.patchLens;
   const warnings = state.editDraft.jsonPatch.warnings || [];
+  const blockingWarnings = state.editDraft.jsonPatch.blockingWarnings || [];
   const typeSummary = state.editDraft.jsonPatch.typeSummary || [];
   state.editDraft.lens = patchLens;
   state.editDraft.values = createDraftValues(patchLens, ADMIN_EDIT_FIELDS);
@@ -1867,6 +1878,7 @@ function applyPublicJsonPatch() {
   state.editDraft.jsonPatch = null;
   const detail = [
     typeSummary.length ? `Detected: ${typeSummary.join("; ")}.` : "",
+    blockingWarnings.join(" "),
     warnings.join(" ")
   ].filter(Boolean).join(" ");
   state.drawerMessage = {
@@ -1957,9 +1969,27 @@ function createDrawerMessage() {
   return message;
 }
 
+function renderLensNestedValidation(validation) {
+  const summary = validation.summary.length
+    ? `<p class="json-patch-note">${escapeHtml(validation.summary.join(" "))}</p>`
+    : "";
+  const blocking = validation.blocking.length
+    ? `<p class="json-patch-error">${escapeHtml(validation.blocking.join(" "))}</p>`
+    : "";
+  return `<div class="new-lens-validation">${blocking}${summary}</div>`;
+}
+
 async function saveLensEdits(form) {
   const lens = getActiveLens();
   if (!lens || !state.editDraft || !state.admin.isAdmin || !state.admin.client) return;
+
+  const updatedLens = buildUpdatedLensFromDraft(lens, state.editDraft);
+  const validation = validateLensNestedData(updatedLens);
+  if (validation.blocking.length) {
+    state.drawerMessage = { tone: "error", text: validation.blocking.join(" ") };
+    rerenderActiveLens();
+    return;
+  }
 
   const submitButton = form.querySelector('button[type="submit"]');
   if (submitButton) {
@@ -1967,11 +1997,10 @@ async function saveLensEdits(form) {
     submitButton.textContent = "Saving...";
   }
 
-  const updatedLens = buildUpdatedLensFromDraft(lens, state.editDraft);
   const saveResult = await saveLensToSupabase(updatedLens);
 
   if (saveResult.error) {
-    state.drawerMessage = { tone: "error", text: "Could not save lens. Please try again." };
+    state.drawerMessage = { tone: "error", text: saveResult.message || "Could not save lens. Please try again." };
     rerenderActiveLens();
     return;
   }
@@ -1983,7 +2012,7 @@ async function saveLensEdits(form) {
   state.editingLensId = "";
   clearStoredDraft(state.editDraft.storageKey);
   state.editDraft = null;
-  state.drawerMessage = { tone: "success", text: "Saved and published to Supabase." };
+  state.drawerMessage = { tone: "success", text: "Saved and verified in Supabase." };
   renderAll();
   rerenderActiveLens();
 }
@@ -2072,6 +2101,14 @@ async function saveLensToSupabase(lens) {
 
   const status = getPublishStatusForSave(lens.status);
   const storedLens = cleanLensArrayFields(toExportLens({ ...lens, status }));
+  const storedValidation = validateLensNestedData(storedLens);
+  if (storedValidation.blocking.length) {
+    return {
+      data: null,
+      error: new Error(storedValidation.blocking.join(" ")),
+      message: storedValidation.blocking.join(" ")
+    };
+  }
 
   const result = await safeSupabaseCall(() =>
     state.admin.client
@@ -2091,7 +2128,38 @@ async function saveLensToSupabase(lens) {
       .select("id")
       .single()
   );
-  return { ...result, lens: storedLens };
+  if (result.error) return { ...result, lens: storedLens };
+
+  const readback = await safeSupabaseCall(() =>
+    state.admin.client
+      .from("lenswiki_records")
+      .select("id,slug,name,manufacturer,year_introduced,status,confidence,data,updated_at")
+      .eq("id", storedLens.id)
+      .single()
+  );
+  if (readback.error) {
+    return {
+      ...readback,
+      lens: storedLens,
+      message: "Saved, but Supabase readback verification failed."
+    };
+  }
+
+  const readbackLens = lensFromSupabaseRecord(readback.data);
+  const readbackData = readback.data?.data && typeof readback.data.data === "object" ? readback.data.data : {};
+  const readbackValidation = validateLensNestedData(readbackData, {
+    requireFocalLengthSpecs: hasValue(storedLens.focalLengthSpecs)
+  });
+  if (readbackValidation.blocking.length) {
+    return {
+      data: readback.data,
+      error: new Error(readbackValidation.blocking.join(" ")),
+      lens: readbackLens || storedLens,
+      message: readbackValidation.blocking.join(" ")
+    };
+  }
+
+  return { data: readback.data, error: null, lens: readbackLens || storedLens };
 }
 
 function getPublishStatusForSave(status) {
@@ -3414,7 +3482,8 @@ function prepareLensJsonPatch(patchObject, currentLens) {
     patchLens,
     preview,
     typeSummary: diagnostics.typeSummary,
-    warnings: diagnostics.warnings
+    warnings: diagnostics.warnings,
+    blockingWarnings: diagnostics.blockingWarnings
   };
 }
 
@@ -3507,6 +3576,7 @@ function getLensFieldLabel(key) {
 function getJsonPatchDiagnostics(lens, patchObject) {
   const typeSummary = [];
   const warnings = [];
+  const blockingWarnings = [];
   const fieldsToDescribe = Array.from(new Set([
     ...FOCAL_LENGTH_SPECS_FIELDS.filter((fieldName) => hasOwn(patchObject, fieldName)),
     ...["sampleFootage", "cineflares", "donorProductionYearsByLens"].filter((fieldName) => hasOwn(patchObject, fieldName))
@@ -3516,13 +3586,12 @@ function getJsonPatchDiagnostics(lens, patchObject) {
     const value = fieldName === "focalLengthSpecs"
       ? lens.focalLengthSpecs
       : patchObject[fieldName];
-    typeSummary.push(`${fieldName}: ${describeJsonValueType(value)}`);
+    typeSummary.push(fieldName === "focalLengthSpecs" ? describeFocalLengthSpecsSummary(value) : `${fieldName}: ${describeJsonValueType(value)}`);
   });
 
-  const touchedFocalSpecs = FOCAL_LENGTH_SPECS_FIELDS.some((fieldName) => hasOwn(patchObject, fieldName));
-  const specs = lens.focalLengthSpecs;
-  if (touchedFocalSpecs && Array.isArray(specs) && specs.length && !hasObjectRows(specs)) {
-    warnings.push("focalLengthSpecs is malformed: expected array of objects.");
+  const nestedValidation = validateLensNestedData(lens);
+  if (FOCAL_LENGTH_SPECS_FIELDS.some((fieldName) => hasOwn(patchObject, fieldName))) {
+    blockingWarnings.push(...nestedValidation.blocking);
   }
 
   if (hasOwn(patchObject, "sampleFootage") && !Array.isArray(patchObject.sampleFootage)) {
@@ -3536,7 +3605,7 @@ function getJsonPatchDiagnostics(lens, patchObject) {
     warnings.push("donorProductionYearsByLens is expected to be an object.");
   }
 
-  return { typeSummary, warnings };
+  return { typeSummary, warnings, blockingWarnings };
 }
 
 function describeJsonValueType(value) {
@@ -3546,6 +3615,39 @@ function describeJsonValueType(value) {
   }
   if (value === null) return "null";
   if (value && typeof value === "object") return "object";
+  return typeof value;
+}
+
+function validateLensNestedData(lens, options = {}) {
+  const validation = {
+    summary: [],
+    blocking: []
+  };
+  const hasSpecs = hasOwn(lens, "focalLengthSpecs") && hasValue(lens.focalLengthSpecs);
+  if (hasSpecs || options.requireFocalLengthSpecs) {
+    validation.summary.push(describeFocalLengthSpecsSummary(lens.focalLengthSpecs));
+    if (!isValidFocalLengthSpecsArray(lens.focalLengthSpecs)) {
+      validation.blocking.push("focalLengthSpecs is malformed. Expected array of objects.");
+    }
+  }
+  return validation;
+}
+
+function describeFocalLengthSpecsSummary(value) {
+  if (!Array.isArray(value)) {
+    return `focalLengthSpecs: ${describeJsonValueType(value)}`;
+  }
+  const firstType = value.length ? describeSimpleJsonType(value[0]) : "none";
+  return `focalLengthSpecs: array, ${value.length} rows, first row type: ${firstType}`;
+}
+
+function isValidFocalLengthSpecsArray(value) {
+  return Array.isArray(value) && value.every((item) => item && typeof item === "object" && !Array.isArray(item));
+}
+
+function describeSimpleJsonType(value) {
+  if (Array.isArray(value)) return "array";
+  if (value === null) return "null";
   return typeof value;
 }
 
@@ -3829,6 +3931,10 @@ function cleanLensArrayFields(lens) {
   const cleaned = { ...lens };
   NORMALIZED_ARRAY_FIELDS.forEach((fieldName) => {
     if (hasValue(cleaned[fieldName])) {
+      if (fieldName === "focalLengthSpecs" && Array.isArray(cleaned[fieldName])) {
+        cleaned[fieldName] = cloneJsonValue(cleaned[fieldName]);
+        return;
+      }
       if (fieldName === "youtubeEmbeds") {
         cleaned[fieldName] = normalizeYouTubeSamples(cleaned[fieldName]);
         return;
