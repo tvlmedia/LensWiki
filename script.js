@@ -1062,6 +1062,9 @@ function handleDrawerInput(event) {
     if (state.editDraft?.jsonPatch) {
       state.editDraft.jsonPatch.raw = event.target.value;
       state.editDraft.jsonPatch.error = "";
+      state.editDraft.jsonPatch.preview = [];
+      state.editDraft.jsonPatch.ignored = [];
+      state.editDraft.jsonPatch.patchValues = null;
     }
     return;
   }
@@ -1257,7 +1260,7 @@ function renderJsonPatchPanel(patchState) {
       ${previewRows}
       <div class="admin-lens-actions">
         <button class="secondary-button small" type="button" data-drawer-action="preview-json-patch">Preview changes</button>
-        <button class="primary-button small" type="button" data-drawer-action="apply-json-patch" ${patchState.preview?.length ? "" : "disabled"}>Apply changes</button>
+        <button class="primary-button small" type="button" data-drawer-action="apply-json-patch">Apply changes</button>
       </div>
     </section>
   `;
@@ -1283,33 +1286,50 @@ function closePublicJsonPatchPanel() {
 
 function previewPublicJsonPatch() {
   if (!state.editDraft?.jsonPatch) return;
-  const parsed = parseJsonPatchInput(state.editDraft.jsonPatch.raw);
+  evaluatePublicJsonPatch();
+  rerenderActiveLens();
+}
+
+function evaluatePublicJsonPatch(options = {}) {
+  const patchState = state.editDraft?.jsonPatch;
+  if (!patchState) return false;
+
+  const parsed = parseJsonPatchInput(patchState.raw);
   if (parsed.error) {
-    state.editDraft.jsonPatch.error = parsed.error;
-    state.editDraft.jsonPatch.preview = [];
-    state.editDraft.jsonPatch.ignored = [];
-    rerenderActiveLens();
-    return;
+    patchState.error = parsed.error;
+    patchState.preview = [];
+    patchState.ignored = [];
+    patchState.patchValues = null;
+    return false;
   }
 
   const prepared = prepareDraftPatch(parsed.value, state.editDraft.values, ADMIN_EDIT_FIELDS);
-  state.editDraft.jsonPatch.error = prepared.error;
-  state.editDraft.jsonPatch.preview = prepared.preview;
-  state.editDraft.jsonPatch.ignored = prepared.ignored;
-  state.editDraft.jsonPatch.patchValues = prepared.patchValues;
-  rerenderActiveLens();
+  patchState.error = prepared.error === "No changes to apply."
+    ? options.emptyMessage || prepared.error
+    : prepared.error;
+  patchState.preview = prepared.preview;
+  patchState.ignored = prepared.ignored;
+  patchState.patchValues = prepared.patchValues;
+  return Boolean(prepared.preview.length);
 }
 
 function applyPublicJsonPatch() {
   if (!state.editDraft?.jsonPatch) return;
-  if (!state.editDraft.jsonPatch.preview?.length) {
-    previewPublicJsonPatch();
+  if (!evaluatePublicJsonPatch({ emptyMessage: "No supported changes found." })) {
+    rerenderActiveLens();
     return;
   }
 
   Object.assign(state.editDraft.values, state.editDraft.jsonPatch.patchValues);
+  const ignoredFields = state.editDraft.jsonPatch.ignored || [];
   state.editDraft.dirty = true;
   state.editDraft.jsonPatch = null;
+  state.drawerMessage = {
+    tone: "success",
+    text: ignoredFields.length
+      ? `Changes applied. Ignored unsupported fields: ${ignoredFields.join(", ")}.`
+      : "Changes applied."
+  };
   persistPublicDraft();
   rerenderActiveLens();
 }
