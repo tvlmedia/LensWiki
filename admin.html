@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>LensWiki Admin</title>
     <meta name="robots" content="noindex">
-    <link rel="stylesheet" href="admin.css">
+    <link rel="stylesheet" href="admin.css?v=supabase-debug">
   </head>
   <body>
     <header class="admin-topbar">
@@ -44,6 +44,8 @@
           <button class="primary-button" id="loginButton" type="submit">Log in</button>
         </form>
 
+        <p class="admin-debug-line" id="adminDebugLine">Supabase client not initialized yet.</p>
+
         <section class="session-panel" id="sessionPanel" hidden>
           <div>
             <span>Signed in as</span>
@@ -61,7 +63,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="supabase-config.js"></script>
-    <script src="admin.js" defer></script>
+    <script src="supabase-config.js?v=supabase-debug"></script>
+    <script src="admin.js?v=supabase-debug" defer></script>
   </body>
 </html>

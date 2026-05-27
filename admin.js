@@ -5,6 +5,7 @@
     accessKicker: document.querySelector("#accessKicker"),
     accessTitle: document.querySelector("#accessTitle"),
     configNotice: document.querySelector("#configNotice"),
+    debugLine: document.querySelector("#adminDebugLine"),
     emailInput: document.querySelector("#emailInput"),
     loginButton: document.querySelector("#loginButton"),
     loginForm: document.querySelector("#loginForm"),
@@ -27,27 +28,48 @@
   async function init() {
     els.loginForm.addEventListener("submit", handleLogin);
     els.logoutButton.addEventListener("click", handleLogout);
+    updateDebugLine("not initialized");
 
     if (isMissingConfig(config)) {
       els.configNotice.hidden = false;
+      els.configNotice.textContent = "Supabase config missing.";
       setLoginDisabled(true);
       showLoggedOut();
+      return;
+    }
+
+    if (!isValidSupabaseUrl(config.url)) {
+      showStatus(`Supabase URL is invalid: ${config.url}`, "error");
+      setLoginDisabled(true);
+      updateDebugLine("invalid URL");
       return;
     }
 
     if (!window.supabase?.createClient) {
       showStatus("Supabase client could not load. Check your connection and CDN access.", "error");
       setLoginDisabled(true);
+      updateDebugLine("CDN failed");
       return;
     }
 
     supabaseClient = window.supabase.createClient(config.url, config.anonKey);
+    updateDebugLine("initialized");
 
-    const { data } = await supabaseClient.auth.getSession();
+    const sessionResult = await safeSupabaseCall(() => supabaseClient.auth.getSession());
+    if (sessionResult.error) {
+      showStatus(getFriendlySupabaseError(sessionResult.error), "error");
+      setLoginDisabled(false);
+      updateDebugLine("connection failed");
+      showLoggedOut();
+      return;
+    }
+
+    const { data } = sessionResult;
     if (data?.session) {
       await restoreUser();
     } else {
       showLoggedOut();
+      showStatus("Supabase client initialized.", "info");
     }
 
     supabaseClient.auth.onAuthStateChange((_event, session) => {
@@ -67,9 +89,11 @@
     const email = els.emailInput.value.trim();
     const password = els.passwordInput.value;
 
-    const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+    const { data, error } = await safeSupabaseCall(() =>
+      supabaseClient.auth.signInWithPassword({ email, password })
+    );
     if (error) {
-      showStatus(error.message, "error");
+      showStatus(getFriendlySupabaseError(error), "error");
       setLoginDisabled(false);
       return;
     }
@@ -81,13 +105,19 @@
 
   async function handleLogout() {
     clearStatus();
-    await supabaseClient.auth.signOut();
+    await safeSupabaseCall(() => supabaseClient.auth.signOut());
     showLoggedOut();
   }
 
   async function restoreUser() {
-    const { data, error } = await supabaseClient.auth.getUser();
-    if (error || !data?.user) {
+    const { data, error } = await safeSupabaseCall(() => supabaseClient.auth.getUser());
+    if (error) {
+      showStatus(getFriendlySupabaseError(error), "error");
+      showLoggedOut();
+      return;
+    }
+
+    if (!data?.user) {
       showLoggedOut();
       return;
     }
@@ -104,17 +134,19 @@
     showLoggedIn(user);
     showAccessState("checking", "Checking admin access...", "Looking for this user in LensWiki admins.");
 
-    const { data, error } = await supabaseClient
-      .from("lenswiki_admins")
-      .select("user_id,email,role")
-      .eq("user_id", user.id)
-      .maybeSingle();
+    const { data, error } = await safeSupabaseCall(() =>
+      supabaseClient
+        .from("lenswiki_admins")
+        .select("user_id,email,role")
+        .eq("user_id", user.id)
+        .maybeSingle()
+    );
 
     if (error) {
       showAccessState(
         "denied",
         "Could not verify admin access.",
-        `${error.message} Check the LensWiki migration and RLS policies.`
+        `${getFriendlySupabaseError(error)} Check the LensWiki migration and RLS policies.`
       );
       return;
     }
@@ -180,5 +212,45 @@
       const normalized = String(value || "").trim();
       return !normalized || normalized.includes("YOUR_SUPABASE_");
     });
+  }
+
+  function isValidSupabaseUrl(url) {
+    try {
+      const parsed = new URL(url);
+      return parsed.protocol === "https:" && parsed.hostname.endsWith(".supabase.co");
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  async function safeSupabaseCall(callback) {
+    try {
+      return await callback();
+    } catch (error) {
+      return { data: null, error };
+    }
+  }
+
+  function getFriendlySupabaseError(error) {
+    const message = String(error?.message || error || "Unknown Supabase error");
+    if (message.toLowerCase().includes("failed to fetch") || error instanceof TypeError) {
+      return "Could not reach Supabase. Check project URL, publishable key, browser cache or Supabase project status.";
+    }
+
+    return message;
+  }
+
+  function updateDebugLine(status) {
+    const projectRef = getProjectRef(config.url) || "unknown";
+    const keyType = config.anonKey.startsWith("sb_publishable_") ? "publishable" : "anon/public";
+    els.debugLine.textContent = `Project ref: ${projectRef} · Key type: ${keyType} · Client: ${status}`;
+  }
+
+  function getProjectRef(url) {
+    try {
+      return new URL(url).hostname.split(".")[0] || "";
+    } catch (_error) {
+      return "";
+    }
   }
 })();
