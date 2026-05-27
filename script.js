@@ -1430,13 +1430,14 @@ async function saveLensEdits(form) {
     return;
   }
 
-  const normalized = normalizeLens({ ...updatedLens, _recordSource: "supabase" }, updatedLens.fileName || lens.fileName || lens.sourceFile);
+  const savedLens = saveResult.lens || updatedLens;
+  const normalized = normalizeLens({ ...savedLens, _recordSource: "supabase" }, savedLens.fileName || lens.fileName || lens.sourceFile);
   replaceLens(normalized);
   state.activeLensId = normalized.id;
   state.editingLensId = "";
   clearStoredDraft(state.editDraft.storageKey);
   state.editDraft = null;
-  state.drawerMessage = { tone: "success", text: "Saved to Supabase. This update is now live for public users." };
+  state.drawerMessage = { tone: "success", text: "Saved and published to Supabase." };
   renderAll();
   rerenderActiveLens();
 }
@@ -1523,17 +1524,10 @@ async function saveLensToSupabase(lens) {
     return { data: null, error: userResult.error || new Error("Admin session unavailable") };
   }
 
-  const existing = await safeSupabaseCall(() =>
-    state.admin.client
-      .from("lenswiki_records")
-      .select("status")
-      .eq("id", lens.id)
-      .maybeSingle()
-  );
-  const status = safeText(lens.status) || safeText(existing.data?.status) || "ready";
+  const status = getPublishStatusForSave(lens.status);
   const storedLens = cleanLensArrayFields(toExportLens({ ...lens, status }));
 
-  return safeSupabaseCall(() =>
+  const result = await safeSupabaseCall(() =>
     state.admin.client
       .from("lenswiki_records")
       .upsert({
@@ -1551,6 +1545,13 @@ async function saveLensToSupabase(lens) {
       .select("id")
       .single()
   );
+  return { ...result, lens: storedLens };
+}
+
+function getPublishStatusForSave(status) {
+  const normalized = safeText(status).trim().toLowerCase();
+  if (!normalized || normalized === "draft") return "ready";
+  return normalized;
 }
 
 function buildUpdatedLensFromDraft(lens, draft) {
