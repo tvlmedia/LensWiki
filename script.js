@@ -118,6 +118,7 @@ const state = {
   editingLensId: "",
   editDraft: null,
   drawerMessage: null,
+  hiddenFlarePromptLensId: "",
   admin: {
     client: null,
     isAdmin: false,
@@ -901,6 +902,7 @@ function openLens(id) {
   state.editingLensId = "";
   state.editDraft = null;
   state.drawerMessage = null;
+  state.hiddenFlarePromptLensId = "";
   els.drawerContent.replaceChildren(renderLensDetails(lens));
   els.detailDrawer.classList.add("is-open");
   els.detailDrawer.setAttribute("aria-hidden", "false");
@@ -917,6 +919,7 @@ function closeDrawer() {
   state.editingLensId = "";
   state.editDraft = null;
   state.drawerMessage = null;
+  state.hiddenFlarePromptLensId = "";
 }
 
 function rerenderActiveLens() {
@@ -942,6 +945,12 @@ function handleDrawerAction(event) {
     copyActiveLensJson(action).catch(() => {
       showInlineCopyStatus(els.drawerContent, "Clipboard blocked. Copy manually.", "error");
     });
+  }
+
+  if (action.dataset.drawerAction === "hide-flare-prompt") {
+    state.hiddenFlarePromptLensId = state.activeLensId;
+    action.closest(".flare-prompt")?.remove();
+    return;
   }
 
   if (action.dataset.drawerAction === "paste-json") {
@@ -1079,6 +1088,7 @@ function renderLensDetails(lens) {
 
   appendIf(fragment, createEditorialSection("Overview", getOverviewSummary(lens)));
   appendIf(fragment, createEditorialSection("Look", lens.lookSummary));
+  appendIf(fragment, createFlarePromptSection(lens));
   appendIf(fragment, createYoutubeSection(lens.youtubeEmbeds));
   appendIf(fragment, createDetailSection("Key specs", createFieldGrid(factFields)));
   appendIf(fragment, createFocalLengthSpecsSection(lens.focalLengthSpecs));
@@ -1568,6 +1578,26 @@ function createEditorialSection(title, content) {
   });
 
   return createDetailSection(title, wrapper);
+}
+
+function createFlarePromptSection(lens) {
+  if (state.hiddenFlarePromptLensId === lens.id) return null;
+
+  const section = document.createElement("section");
+  section.className = "flare-prompt";
+  section.innerHTML = `
+    <div>
+      <h3>Check flare behavior?</h3>
+      <p>Compare lens flare references on CineFlares.</p>
+    </div>
+    <div class="flare-prompt-actions">
+      <a class="secondary-button small" href="https://lenses.cineflares.com/" target="_blank" rel="noopener noreferrer">
+        Yes, open CineFlares
+      </a>
+      <button class="ghost-button small" type="button" data-drawer-action="hide-flare-prompt">No</button>
+    </div>
+  `;
+  return section;
 }
 
 function createFieldGrid(fields) {
