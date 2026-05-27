@@ -555,6 +555,54 @@ button:disabled {
   height: auto;
 }
 
+.toggle-field {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px;
+  background: #090b0f;
+}
+
+.toggle-field legend {
+  padding: 0 4px;
+  color: var(--subtle);
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.toggle-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.toggle-options label {
+  cursor: pointer;
+}
+
+.toggle-options input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toggle-options span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0 12px;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.toggle-options input:checked + span {
+  color: #dff3ff;
+  border-color: rgba(47, 156, 255, 0.42);
+  background: rgba(47, 156, 255, 0.12);
+}
+
 .dashboard-footer {
   display: flex;
   justify-content: flex-end;

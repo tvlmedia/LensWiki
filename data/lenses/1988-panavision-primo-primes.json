@@ -18,6 +18,7 @@
     "rental-only",
     "matched-family"
   ],
+  "isRehoused": false,
   "importance": "legendary",
   "timelineCategory": "Modern cinema primes",
   "era": "1980s",

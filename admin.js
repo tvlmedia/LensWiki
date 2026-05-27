@@ -12,6 +12,15 @@
     "famousUses",
     "focalLengthSpecs"
   ]);
+  const REHOUSING_FIELD_KEYS = new Set([
+    "donorLens",
+    "rehousingInfo",
+    "originalMount",
+    "donorMount",
+    "rehousingCompany",
+    "rehousingGeneration",
+    "rehousingNotes"
+  ]);
 
   const LENS_FIELDS = [
     { key: "id", label: "Lens ID", type: "text", required: true },
@@ -20,6 +29,7 @@
     { key: "name", label: "Lens name", type: "text", required: true },
     { key: "yearIntroduced", label: "Year introduced", type: "number", required: true },
     { key: "yearApproximate", label: "Approximate year", type: "checkbox" },
+    { key: "isRehoused", label: "Rehoused lens", type: "toggle" },
     { key: "status", label: "Publication status", type: "text" },
     { key: "importance", label: "Importance", type: "text" },
     { key: "confidence", label: "Confidence", type: "text" },
@@ -39,6 +49,13 @@
     { key: "seriesHistory", label: "History / series history", type: "lines" },
     { key: "strengths", label: "Strengths", type: "lines" },
     { key: "weaknesses", label: "Weaknesses", type: "lines" },
+    { key: "donorLens", label: "Donor lens", type: "text" },
+    { key: "rehousingInfo", label: "Rehousing info", type: "textarea" },
+    { key: "originalMount", label: "Original mount", type: "text" },
+    { key: "donorMount", label: "Donor mount", type: "text" },
+    { key: "rehousingCompany", label: "Rehousing company", type: "text" },
+    { key: "rehousingGeneration", label: "Rehousing generation", type: "text" },
+    { key: "rehousingNotes", label: "Rehousing notes", type: "textarea" },
     { key: "famousUses", label: "Known use", type: "structured" },
     { key: "sources", label: "Sources", type: "structured" },
     { key: "focalLengthSpecs", label: "Focal length specs", type: "structured" },
@@ -360,7 +377,7 @@
         ` : ""}
         ${draft.jsonPatch?.open ? renderJsonPatchPanel(draft.jsonPatch) : ""}
         <div class="form-grid">
-          ${LENS_FIELDS.map((field) => renderEditorField(draft, field)).join("")}
+          ${LENS_FIELDS.filter((field) => shouldShowEditorField(draft, field)).map((field) => renderEditorField(draft, field)).join("")}
         </div>
       </form>
     `;
@@ -457,6 +474,25 @@
   function renderEditorField(draft, field) {
     const value = draft.values[field.key] ?? "";
     const required = field.required ? "required" : "";
+    if (field.type === "toggle") {
+      const checked = Boolean(value);
+      return `
+        <fieldset class="form-field form-field-wide toggle-field">
+          <legend>${escapeHtml(field.label)}</legend>
+          <div class="toggle-options">
+            <label>
+              <input name="${escapeHtml(field.key)}" type="radio" value="true" ${checked ? "checked" : ""}>
+              <span>Yes</span>
+            </label>
+            <label>
+              <input name="${escapeHtml(field.key)}" type="radio" value="false" ${!checked ? "checked" : ""}>
+              <span>No</span>
+            </label>
+          </div>
+        </fieldset>
+      `;
+    }
+
     if (field.type === "checkbox") {
       return `
         <label class="form-field checkbox-field">
@@ -484,6 +520,11 @@
         ${getFieldHint(field)}
       </label>
     `;
+  }
+
+  function shouldShowEditorField(draft, field) {
+    if (!REHOUSING_FIELD_KEYS.has(field.key)) return true;
+    return Boolean(draft.values.isRehoused);
   }
 
   function getFieldHint(field) {
@@ -545,9 +586,13 @@
     const fieldName = event.target.name;
     if (!fieldName) return;
 
-    state.editorDraft.values[fieldName] = event.target.type === "checkbox"
-      ? event.target.checked
-      : event.target.value;
+    if (event.target.type === "checkbox") {
+      state.editorDraft.values[fieldName] = event.target.checked;
+    } else if (event.target.type === "radio" && fieldName === "isRehoused") {
+      state.editorDraft.values[fieldName] = event.target.value === "true";
+    } else {
+      state.editorDraft.values[fieldName] = event.target.value;
+    }
     state.editorDraft.dirty = true;
 
     const form = event.target.closest("form");
@@ -561,7 +606,11 @@
     }
 
     persistEditorDraft();
-    updateEditorDraftStatus();
+    if (fieldName === "isRehoused") {
+      renderEditorForm();
+    } else {
+      updateEditorDraftStatus();
+    }
   }
 
   function updateGeneratedNewLensFields(form) {
@@ -618,7 +667,7 @@
   function buildLensFromDraft(draft) {
     const lens = {};
     LENS_FIELDS.forEach((field) => {
-      if (field.type === "checkbox") {
+      if (field.type === "checkbox" || field.type === "toggle") {
         lens[field.key] = Boolean(draft.values[field.key]);
         return;
       }
@@ -777,6 +826,11 @@
     prepared.fileName = safeText(prepared.fileName) || `${prepared.id}.json`;
     prepared.status = safeText(prepared.status) || "ready";
     prepared.confidence = safeText(prepared.confidence) || "needs verification";
+    if (!hasOwn(prepared, "isRehoused")) {
+      prepared.isRehoused = typeSuggestsRehoused(prepared.type);
+    } else {
+      prepared.isRehoused = parseBoolean(prepared.isRehoused);
+    }
     return cleanLensArrayFields(prepared);
   }
 
@@ -818,6 +872,7 @@
       name: safeText(data.name) || safeText(record.name),
       manufacturer: safeText(data.manufacturer) || safeText(record.manufacturer),
       yearIntroduced: data.yearIntroduced || record.year_introduced || "",
+      isRehoused: hasOwn(data, "isRehoused") ? parseBoolean(data.isRehoused) : typeSuggestsRehoused(data.type),
       status: safeText(data.status) || safeText(record.status) || "ready",
       confidence: safeText(data.confidence) || safeText(record.confidence)
     };
@@ -971,11 +1026,12 @@
 
   function prepareDraftPatch(patchObject, currentValues, fields) {
     const fieldMap = new Map(fields.map((field) => [field.key, field]));
+    const normalizedPatch = normalizeLensPatchObject(patchObject);
     const patchValues = {};
     const preview = [];
     const ignored = [];
 
-    Object.entries(patchObject).forEach(([key, value]) => {
+    Object.entries(normalizedPatch).forEach(([key, value]) => {
       const field = fieldMap.get(key);
       if (!field) {
         ignored.push(key);
@@ -1003,8 +1059,19 @@
     };
   }
 
+  function normalizeLensPatchObject(patchObject) {
+    const normalized = { ...patchObject };
+    if (!hasOwn(normalized, "isRehoused") && hasOwn(normalized, "type")) {
+      const type = normalizeArrayField(normalized.type, { fieldName: "type" });
+      if (typeSuggestsRehoused(type)) {
+        normalized.isRehoused = true;
+      }
+    }
+    return normalized;
+  }
+
   function serializePatchValue(value, field) {
-    if (field.type === "checkbox") return Boolean(value);
+    if (field.type === "checkbox" || field.type === "toggle") return parseBoolean(value);
     if (field.type === "number") return hasValue(value) ? String(value) : "";
     if (NORMALIZED_ARRAY_FIELDS.has(field.key)) {
       const normalized = normalizeArrayField(value, {
@@ -1046,6 +1113,7 @@
       manufacturer: "",
       yearIntroduced: "",
       yearApproximate: false,
+      isRehoused: false,
       status: "ready",
       confidence: "needs verification",
       type: [],
@@ -1055,7 +1123,7 @@
 
   function createDraftValues(lens) {
     return LENS_FIELDS.reduce((values, field) => {
-      values[field.key] = field.type === "checkbox"
+      values[field.key] = field.type === "checkbox" || field.type === "toggle"
         ? Boolean(lens[field.key])
         : serializeField(lens[field.key], field.type);
       return values;
@@ -1313,6 +1381,26 @@
   function hasValue(value) {
     if (Array.isArray(value)) return value.length > 0;
     return value !== null && value !== undefined && value !== "";
+  }
+
+  function hasOwn(object, key) {
+    return Object.prototype.hasOwnProperty.call(object || {}, key);
+  }
+
+  function parseBoolean(value) {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    const normalized = safeText(value).toLowerCase();
+    if (["true", "yes", "1", "on"].includes(normalized)) return true;
+    if (["false", "no", "0", "off"].includes(normalized)) return false;
+    return Boolean(value);
+  }
+
+  function typeSuggestsRehoused(type) {
+    return normalizeArrayField(type, { fieldName: "type" }).some((item) => {
+      const normalized = safeText(item).toLowerCase().replace(/[^a-z0-9]+/g, "");
+      return normalized.includes("rehoused");
+    });
   }
 
   function safeText(value, fallback = "") {

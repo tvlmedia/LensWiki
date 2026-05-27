@@ -48,6 +48,11 @@
         "type": "string"
       }
     },
+    "isRehoused": {
+      "type": "boolean",
+      "default": false,
+      "description": "True when this record describes a rehoused lens or rehoused lens family rather than an original cinema lens."
+    },
     "importance": {
       "type": "string",
       "enum": ["legendary", "important", "niche", "obscure", "experimental", ""]
@@ -176,6 +181,21 @@
       "type": "string"
     },
     "rehousingInfo": {
+      "type": "string"
+    },
+    "originalMount": {
+      "type": "string"
+    },
+    "donorMount": {
+      "type": "string"
+    },
+    "rehousingCompany": {
+      "type": "string"
+    },
+    "rehousingGeneration": {
+      "type": "string"
+    },
+    "rehousingNotes": {
       "type": "string"
     },
     "lookSummary": {

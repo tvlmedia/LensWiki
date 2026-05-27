@@ -43,11 +43,21 @@ const NORMALIZED_ARRAY_FIELDS = new Set([
   "famousUses",
   "focalLengthSpecs"
 ]);
+const REHOUSING_FIELD_KEYS = new Set([
+  "donorLens",
+  "rehousingInfo",
+  "originalMount",
+  "donorMount",
+  "rehousingCompany",
+  "rehousingGeneration",
+  "rehousingNotes"
+]);
 const ADMIN_EDIT_FIELDS = [
   { key: "manufacturer", label: "Maker / brand", type: "text" },
   { key: "name", label: "Lens name", type: "text" },
   { key: "yearIntroduced", label: "Year introduced", type: "number" },
   { key: "yearApproximate", label: "Approximate year", type: "checkbox" },
+  { key: "isRehoused", label: "Rehoused lens", type: "toggle" },
   { key: "status", label: "Publication status", type: "text" },
   { key: "importance", label: "Importance", type: "text" },
   { key: "confidence", label: "Confidence", type: "text" },
@@ -70,6 +80,11 @@ const ADMIN_EDIT_FIELDS = [
   { key: "seriesHistory", label: "History / series history", type: "lines" },
   { key: "rehousingInfo", label: "Rehousing info", type: "textarea" },
   { key: "donorLens", label: "Donor lens", type: "text" },
+  { key: "originalMount", label: "Original mount", type: "text" },
+  { key: "donorMount", label: "Donor mount", type: "text" },
+  { key: "rehousingCompany", label: "Rehousing company", type: "text" },
+  { key: "rehousingGeneration", label: "Rehousing generation", type: "text" },
+  { key: "rehousingNotes", label: "Rehousing notes", type: "textarea" },
   { key: "famousUses", label: "Known use", type: "structured" },
   { key: "youtubeEmbeds", label: "YouTube sample links", type: "lines" },
   { key: "relatedLensIds", label: "Related lens IDs", type: "list" },
@@ -89,7 +104,8 @@ const state = {
     format: [],
     importance: "all",
     tag: "all",
-    lineage: "all"
+    lineage: "all",
+    rehousedOnly: false
   },
   mode: "cards",
   activeQuickChip: "",
@@ -168,6 +184,7 @@ function cacheEls() {
 function bindEvents() {
   els.searchInput.addEventListener("input", (event) => {
     state.filters.search = event.target.value.trim().toLowerCase();
+    state.filters.rehousedOnly = false;
     state.activeQuickChip = getMatchingQuickChip(state.filters.search);
     renderArchive();
   });
@@ -202,9 +219,20 @@ function bindEvents() {
   els.quickChips.addEventListener("click", (event) => {
     const chip = event.target.closest("[data-query]");
     if (!chip) return;
+    if (chip.dataset.typeFilter) {
+      const activeKey = `type:${chip.dataset.typeFilter}`;
+      const nextActive = state.activeQuickChip === activeKey ? "" : activeKey;
+      state.filters.search = "";
+      els.searchInput.value = "";
+      state.filters.rehousedOnly = Boolean(nextActive);
+      state.activeQuickChip = nextActive;
+      renderArchive();
+      return;
+    }
     const query = chip.dataset.query || chip.textContent.trim();
     const normalizedQuery = normalizeSearchValue(query);
     const nextValue = state.activeQuickChip === normalizedQuery ? "" : query;
+    state.filters.rehousedOnly = false;
     els.searchInput.value = nextValue;
     state.filters.search = normalizeSearchValue(nextValue);
     state.activeQuickChip = state.filters.search ? normalizedQuery : "";
@@ -507,6 +535,7 @@ function warnIfIdDoesNotMatchFile(id, fileName) {
 
 function normalizeLens(lens, fileName) {
   const type = normalizeArrayField(lens.type, { fieldName: "type" });
+  const hasExplicitRehousedFlag = hasOwn(lens, "isRehoused");
   const timelineCategory = safeText(lens.timelineCategory);
   const cardLabel = safeText(lens.cardLabel)
     || timelineCategory
@@ -528,6 +557,8 @@ function normalizeLens(lens, fileName) {
     country: safeText(lens.country),
     factoryLocation: safeText(lens.factoryLocation),
     type,
+    isRehoused: hasExplicitRehousedFlag ? parseBoolean(lens.isRehoused) : typeSuggestsRehoused(type),
+    _isRehousedExplicit: hasExplicitRehousedFlag,
     importance: normalizeImportance(lens.importance),
     timelineCategory,
     era: safeText(lens.era),
@@ -549,6 +580,11 @@ function normalizeLens(lens, fileName) {
     designFamily: safeText(lens.designFamily),
     donorLens: safeText(lens.donorLens),
     rehousingInfo: safeText(lens.rehousingInfo),
+    originalMount: safeText(lens.originalMount),
+    donorMount: safeText(lens.donorMount),
+    rehousingCompany: safeText(lens.rehousingCompany),
+    rehousingGeneration: safeText(lens.rehousingGeneration),
+    rehousingNotes: safeText(lens.rehousingNotes),
     lookSummary: safeText(lens.lookSummary),
     characteristics: normalizeArrayField(lens.characteristics),
     strengths: normalizeArrayField(lens.strengths),
@@ -660,9 +696,12 @@ function renderModeButtons() {
 
 function renderQuickChips() {
   els.quickChips.querySelectorAll("[data-query]").forEach((chip) => {
-    const query = normalizeSearchValue(chip.dataset.query || chip.textContent);
-    chip.classList.toggle("is-active", query === state.activeQuickChip);
-    chip.setAttribute("aria-pressed", String(query === state.activeQuickChip));
+    const query = chip.dataset.typeFilter
+      ? `type:${chip.dataset.typeFilter}`
+      : normalizeSearchValue(chip.dataset.query || chip.textContent);
+    const active = query === state.activeQuickChip;
+    chip.classList.toggle("is-active", active);
+    chip.setAttribute("aria-pressed", String(active));
   });
 }
 
@@ -700,7 +739,15 @@ function setEraFilter(era) {
 
 function clearFilters() {
   Object.keys(state.filters).forEach((key) => {
-    state.filters[key] = ["type", "format"].includes(key) ? [] : key === "search" ? "" : "all";
+    if (["type", "format"].includes(key)) {
+      state.filters[key] = [];
+    } else if (key === "search") {
+      state.filters[key] = "";
+    } else if (key === "rehousedOnly") {
+      state.filters[key] = false;
+    } else {
+      state.filters[key] = "all";
+    }
   });
 
   els.searchInput.value = "";
@@ -812,7 +859,10 @@ function createLensCard(lens) {
   card.innerHTML = `
     <div class="card-topline">
       <span class="year-pill">${escapeHtml(formatYear(lens))}</span>
-      ${lens.importance ? `<span class="importance-pill ${escapeHtml(lens.importance)}">${escapeHtml(lens.importance)}</span>` : ""}
+      <span class="card-badges">
+        ${lens.isRehoused ? '<span class="data-pill">Rehoused</span>' : ""}
+        ${lens.importance ? `<span class="importance-pill ${escapeHtml(lens.importance)}">${escapeHtml(lens.importance)}</span>` : ""}
+      </span>
     </div>
     <h3>${escapeHtml(lens.name)}</h3>
     ${lens.manufacturer ? `<p class="manufacturer">${escapeHtml(lens.manufacturer)}</p>` : ""}
@@ -936,12 +986,20 @@ function handleDrawerInput(event) {
   const fieldName = event.target.name;
   if (!fieldName) return;
 
-  state.editDraft.values[fieldName] = event.target.type === "checkbox"
-    ? event.target.checked
-    : event.target.value;
+  if (event.target.type === "checkbox") {
+    state.editDraft.values[fieldName] = event.target.checked;
+  } else if (event.target.type === "radio" && fieldName === "isRehoused") {
+    state.editDraft.values[fieldName] = event.target.value === "true";
+  } else {
+    state.editDraft.values[fieldName] = event.target.value;
+  }
   state.editDraft.dirty = true;
   persistPublicDraft();
-  updatePublicDraftStatus();
+  if (fieldName === "isRehoused") {
+    rerenderActiveLens();
+  } else {
+    updatePublicDraftStatus();
+  }
 }
 
 function handleDrawerSubmit(event) {
@@ -989,6 +1047,7 @@ function renderLensDetails(lens) {
     <div class="drawer-meta">
       <span class="year-pill">${escapeHtml(formatYear(lens))}</span>
       ${lens.importance ? `<span class="importance-pill ${escapeHtml(lens.importance)}">${escapeHtml(lens.importance)}</span>` : ""}
+      ${lens.isRehoused ? '<span class="data-pill">Rehoused</span>' : ""}
       ${shouldShowTitleConfidence(lens.confidence) ? `<span class="confidence subtle ${escapeHtml(confidenceClass(lens.confidence))}">${escapeHtml(lens.confidence)}</span>` : ""}
     </div>
     ${state.admin.isAdmin ? `
@@ -1067,7 +1126,7 @@ function renderLensEditForm(lens) {
     ` : ""}
     ${draft.jsonPatch?.open ? renderJsonPatchPanel(draft.jsonPatch) : ""}
     <div class="edit-grid">
-      ${ADMIN_EDIT_FIELDS.map((field) => renderEditField(draft, field)).join("")}
+      ${ADMIN_EDIT_FIELDS.filter((field) => shouldShowEditField(draft, field)).map((field) => renderEditField(draft, field)).join("")}
     </div>
   `;
   return form;
@@ -1163,6 +1222,25 @@ function applyPublicJsonPatch() {
 
 function renderEditField(draft, field) {
   const value = draft.values[field.key] ?? "";
+  if (field.type === "toggle") {
+    const checked = Boolean(value);
+    return `
+      <fieldset class="edit-field edit-field-wide toggle-field">
+        <legend>${escapeHtml(field.label)}</legend>
+        <div class="toggle-options">
+          <label>
+            <input name="${escapeHtml(field.key)}" type="radio" value="true" ${checked ? "checked" : ""}>
+            <span>Yes</span>
+          </label>
+          <label>
+            <input name="${escapeHtml(field.key)}" type="radio" value="false" ${!checked ? "checked" : ""}>
+            <span>No</span>
+          </label>
+        </div>
+      </fieldset>
+    `;
+  }
+
   if (field.type === "checkbox") {
     return `
       <label class="edit-field edit-field-checkbox">
@@ -1190,6 +1268,11 @@ function renderEditField(draft, field) {
       ${getEditHint(field)}
     </label>
   `;
+}
+
+function shouldShowEditField(draft, field) {
+  if (!REHOUSING_FIELD_KEYS.has(field.key)) return true;
+  return Boolean(draft.values.isRehoused);
 }
 
 function getEditHint(field) {
@@ -1352,7 +1435,7 @@ function buildUpdatedLensFromDraft(lens, draft) {
   const updated = { ...toExportLens(lens) };
 
   ADMIN_EDIT_FIELDS.forEach((field) => {
-    if (field.type === "checkbox") {
+    if (field.type === "checkbox" || field.type === "toggle") {
       updated[field.key] = Boolean(draft.values[field.key]);
       return;
     }
@@ -1414,7 +1497,7 @@ function getPublicDraftStorageKey(lensId) {
 
 function createDraftValues(lens, fields) {
   return fields.reduce((values, field) => {
-    values[field.key] = field.type === "checkbox"
+    values[field.key] = field.type === "checkbox" || field.type === "toggle"
       ? Boolean(lens[field.key])
       : serializeEditValue(lens[field.key], field.type);
     return values;
@@ -1543,7 +1626,7 @@ function createListSection(title, items) {
 }
 
 function createRehousingSection(lens) {
-  if (!shouldShowRehousingInfo(lens) && !shouldShowDonorLens(lens)) return null;
+  if (!shouldShowRehousingSection(lens)) return null;
 
   const wrapper = document.createElement("div");
   wrapper.className = "rehousing-block";
@@ -1560,15 +1643,16 @@ function createRehousingSection(lens) {
     const mechanicalSection = document.createElement("div");
     mechanicalSection.className = "rehousing-subsection";
     mechanicalSection.innerHTML = "<h4>Mechanical rehousing</h4>";
-    mechanicalSection.append(createParagraphBlock(lens.rehousingInfo));
+    mechanicalSection.append(createParagraphBlock(getMechanicalRehousingText(lens)));
     wrapper.append(mechanicalSection);
   }
 
-  if (hasValue(lens.rehousingNotes)) {
+  const notes = getRehousingNotes(lens);
+  if (hasValue(notes)) {
     const notesSection = document.createElement("div");
     notesSection.className = "rehousing-subsection";
     notesSection.innerHTML = "<h4>Notes</h4>";
-    notesSection.append(createParagraphBlock(lens.rehousingNotes));
+    notesSection.append(createParagraphBlock(notes));
     wrapper.append(notesSection);
   }
 
@@ -1588,6 +1672,20 @@ function createParagraphBlock(content) {
 
 function splitDonorOptics(value) {
   return normalizeArrayField(value).flatMap((item) => safeText(item).split(/\s*,\s*/)).map((item) => item.trim()).filter(Boolean);
+}
+
+function getMechanicalRehousingText(lens) {
+  return [
+    lens.rehousingCompany ? `Rehousing company: ${lens.rehousingCompany}` : "",
+    lens.rehousingGeneration ? `Generation: ${lens.rehousingGeneration}` : "",
+    lens.originalMount ? `Original mount: ${lens.originalMount}` : "",
+    lens.donorMount ? `Donor mount: ${lens.donorMount}` : "",
+    lens.rehousingInfo
+  ].filter(hasValue);
+}
+
+function getRehousingNotes(lens) {
+  return lens.rehousingNotes || "";
 }
 
 function createFocalLengthSpecsSection(specs) {
@@ -1883,7 +1981,7 @@ function exportJson() {
 }
 
 function toExportLens(lens) {
-  const { searchText, ...exportable } = lens;
+  const { searchText, _isRehousedExplicit, ...exportable } = lens;
   return exportable;
 }
 
@@ -1899,8 +1997,9 @@ function getFilteredLenses() {
     const matchesImportance = state.filters.importance === "all" || lens.importance === state.filters.importance;
     const matchesTag = state.filters.tag === "all" || lens.characteristics.includes(state.filters.tag);
     const matchesLineage = state.filters.lineage === "all" || lens.lineage === state.filters.lineage;
+    const matchesRehousedOnly = !state.filters.rehousedOnly || lens.isRehoused === true;
 
-    return matchesSearch && matchesEra && matchesManufacturer && matchesType && matchesFormat && matchesImportance && matchesTag && matchesLineage;
+    return matchesSearch && matchesEra && matchesManufacturer && matchesType && matchesFormat && matchesImportance && matchesTag && matchesLineage && matchesRehousedOnly;
   });
 }
 
@@ -1958,6 +2057,7 @@ function hasPositivePhrase(spacedText, phrase) {
 function buildTypeFilterText(lens) {
   return [
     lens.type,
+    lens.isRehoused ? "rehoused" : "",
     lens.characteristics,
     lens.timelineCategory,
     lens.cardLabel,
@@ -1996,8 +2096,14 @@ function buildSearchText(lens) {
     lens.coating,
     lens.opticalFormula,
     lens.designFamily,
+    lens.isRehoused ? "rehoused" : "",
     lens.donorLens,
     lens.rehousingInfo,
+    lens.originalMount,
+    lens.donorMount,
+    lens.rehousingCompany,
+    lens.rehousingGeneration,
+    lens.rehousingNotes,
     lens.publicSummary,
     lens.lookSummary,
     lens.notes,
@@ -2124,18 +2230,37 @@ function getCardCoverage(lens) {
   return coverage.length > 74 ? `${coverage.slice(0, 71).trim()}...` : coverage;
 }
 
+function shouldShowRehousingSection(lens) {
+  if (lens.isRehoused === true) {
+    return hasValue(lens.donorLens)
+      || hasValue(lens.rehousingInfo)
+      || hasValue(lens.originalMount)
+      || hasValue(lens.donorMount)
+      || hasValue(lens.rehousingCompany)
+      || hasValue(lens.rehousingGeneration)
+      || hasValue(lens.rehousingNotes);
+  }
+  if (lens._isRehousedExplicit) return false;
+  return (hasValue(lens.donorLens) || hasValue(lens.rehousingInfo)) && hasRehousingEvidence(lens);
+}
+
 function shouldShowDonorLens(lens) {
+  if (!shouldShowRehousingSection(lens)) return false;
   if (!hasValue(lens.donorLens)) return false;
-  return hasRehousingEvidence(lens);
+  return lens.isRehoused === true || hasRehousingEvidence(lens);
 }
 
 function shouldShowRehousingInfo(lens) {
-  return hasValue(lens.rehousingInfo) && hasRehousingEvidence(lens);
+  if (!shouldShowRehousingSection(lens)) return false;
+  return hasValue(getMechanicalRehousingText(lens));
 }
 
 function hasRehousingEvidence(lens) {
   const rehousingEvidence = [
+    lens.isRehoused ? "rehoused" : "",
     lens.rehousingInfo,
+    lens.rehousingCompany,
+    lens.rehousingGeneration,
     lens.lineage,
     lens.timelineCategory,
     lens.cardLabel,
@@ -2152,6 +2277,26 @@ function formatArchiveMakerLine(lens) {
 function formatYear(lens) {
   if (!lens.yearIntroduced) return "";
   return `${lens.yearApproximate ? "c. " : ""}${lens.yearIntroduced}`;
+}
+
+function hasOwn(object, key) {
+  return Object.prototype.hasOwnProperty.call(object || {}, key);
+}
+
+function parseBoolean(value) {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value !== 0;
+  const normalized = safeText(value).toLowerCase();
+  if (["true", "yes", "1", "on"].includes(normalized)) return true;
+  if (["false", "no", "0", "off"].includes(normalized)) return false;
+  return Boolean(value);
+}
+
+function typeSuggestsRehoused(type) {
+  return normalizeArrayField(type, { fieldName: "type" }).some((item) => {
+    const normalized = normalizeMatchText(item);
+    return normalized.compact.includes("rehoused") || normalized.compact.includes("rehousedcine");
+  });
 }
 
 function shouldShowTitleConfidence(confidence) {
@@ -2178,7 +2323,7 @@ function cleanMountsForDisplay(value) {
 }
 
 function isMountMechanismNote(value) {
-  return /\b(adapter|custom|depending|mechanic|order|option|system|varies|verify)\b/i.test(value);
+  return /\b(adapter|custom|depending|mechanic|order|option|rehous|system|varies|verify)\b/i.test(value);
 }
 
 function extractMountLabels(value) {
@@ -2306,11 +2451,12 @@ function parseJsonPatchInput(rawInput) {
 
 function prepareDraftPatch(patchObject, currentValues, fields) {
   const fieldMap = new Map(fields.map((field) => [field.key, field]));
+  const normalizedPatch = normalizeLensPatchObject(patchObject);
   const patchValues = {};
   const preview = [];
   const ignored = [];
 
-  Object.entries(patchObject).forEach(([key, value]) => {
+  Object.entries(normalizedPatch).forEach(([key, value]) => {
     const field = fieldMap.get(key);
     if (!field) {
       ignored.push(key);
@@ -2338,8 +2484,19 @@ function prepareDraftPatch(patchObject, currentValues, fields) {
   };
 }
 
+function normalizeLensPatchObject(patchObject) {
+  const normalized = { ...patchObject };
+  if (!hasOwn(normalized, "isRehoused") && hasOwn(normalized, "type")) {
+    const type = normalizeArrayField(normalized.type, { fieldName: "type" });
+    if (typeSuggestsRehoused(type)) {
+      normalized.isRehoused = true;
+    }
+  }
+  return normalized;
+}
+
 function serializePatchValue(value, field) {
-  if (field.type === "checkbox") return Boolean(value);
+  if (field.type === "checkbox" || field.type === "toggle") return parseBoolean(value);
   if (field.type === "number") return hasValue(value) ? String(value) : "";
   if (NORMALIZED_ARRAY_FIELDS.has(field.key)) {
     const normalized = normalizeArrayField(value, {
