@@ -276,6 +276,8 @@ h3 {
   border-color: var(--line);
 }
 
+.primary-button.small,
+.secondary-button.small,
 .ghost-button.small {
   min-height: 34px;
   padding: 0 12px;
@@ -1178,6 +1180,28 @@ button.dense-row:hover {
   margin-bottom: 0;
 }
 
+.admin-lens-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.drawer-message {
+  margin: 10px 52px 12px 0;
+  padding: 10px 12px;
+  color: #d9fff0;
+  border: 1px solid rgba(83, 214, 163, 0.3);
+  border-radius: var(--radius);
+  background: rgba(83, 214, 163, 0.1);
+}
+
+.drawer-message.error {
+  color: #ffe0e6;
+  border-color: rgba(232, 92, 117, 0.34);
+  background: rgba(232, 92, 117, 0.1);
+}
+
 .confidence {
   color: #f9d4db;
   background: rgba(232, 92, 117, 0.14);
@@ -1410,6 +1434,80 @@ button.dense-row:hover {
   font-size: 0.86rem;
 }
 
+.lens-edit-form {
+  clear: both;
+}
+
+.edit-title {
+  margin-right: 52px;
+}
+
+.edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.edit-field {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.edit-field-wide {
+  grid-column: 1 / -1;
+}
+
+.edit-field input,
+.edit-field textarea {
+  color: var(--ink);
+  background: #090b0f;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.edit-field input {
+  height: 40px;
+  padding: 0 12px;
+}
+
+.edit-field textarea {
+  min-height: 96px;
+  padding: 11px 12px;
+}
+
+.edit-field input:focus,
+.edit-field textarea:focus {
+  border-color: rgba(47, 156, 255, 0.42);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+
+.edit-field small {
+  color: var(--subtle);
+  font-weight: 500;
+}
+
+.edit-field-checkbox {
+  align-self: end;
+  min-height: 40px;
+  padding: 10px 12px;
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.028);
+}
+
+.edit-field-checkbox input {
+  width: auto;
+  height: auto;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
 .youtube-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -1555,6 +1653,10 @@ button.dense-row:hover {
 
   .drawer-panel {
     padding: 20px;
+  }
+
+  .edit-grid {
+    grid-template-columns: 1fr;
   }
 }
 

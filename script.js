@@ -30,6 +30,39 @@ const FORMAT_FILTERS = [
   { value: "full-frame", label: "Full Frame", terms: ["full frame", "full-frame", "ff", "stills-derived", "still lens derived"] },
   { value: "65mm-large-format", label: "65mm / Large Format", terms: ["65mm", "large format", "large-format", "lf", "alexa 65", "vistavision"] }
 ];
+const ADMIN_EDIT_FIELDS = [
+  { key: "manufacturer", label: "Maker / brand", type: "text" },
+  { key: "name", label: "Lens name", type: "text" },
+  { key: "yearIntroduced", label: "Year introduced", type: "number" },
+  { key: "yearApproximate", label: "Approximate year", type: "checkbox" },
+  { key: "importance", label: "Importance", type: "text" },
+  { key: "confidence", label: "Confidence", type: "text" },
+  { key: "timelineCategory", label: "Timeline category", type: "text" },
+  { key: "cardLabel", label: "Short archive label", type: "text" },
+  { key: "publicSummary", label: "Overview text", type: "textarea" },
+  { key: "lookSummary", label: "Look text", type: "textarea" },
+  { key: "productionYears", label: "Production years", type: "text" },
+  { key: "country", label: "Country", type: "text" },
+  { key: "factoryLocation", label: "Factory / location", type: "text" },
+  { key: "type", label: "Type", type: "list" },
+  { key: "characteristics", label: "Tags / character", type: "list" },
+  { key: "coverage", label: "Coverage", type: "text" },
+  { key: "mounts", label: "Mounts", type: "list" },
+  { key: "focalLengths", label: "Focal lengths", type: "list" },
+  { key: "tStops", label: "T-stops / F-stops", type: "list" },
+  { key: "strengths", label: "Strengths", type: "lines" },
+  { key: "weaknesses", label: "Weaknesses", type: "lines" },
+  { key: "seriesHistory", label: "History / series history", type: "lines" },
+  { key: "rehousingInfo", label: "Rehousing info", type: "textarea" },
+  { key: "donorLens", label: "Donor lens", type: "text" },
+  { key: "famousUses", label: "Known use", type: "structured" },
+  { key: "youtubeEmbeds", label: "YouTube sample links", type: "lines" },
+  { key: "relatedLensIds", label: "Related lens IDs", type: "list" },
+  { key: "sources", label: "Sources", type: "structured" },
+  { key: "notes", label: "Notes", type: "textarea" },
+  { key: "curationNotes", label: "Confidence notes", type: "textarea" },
+  { key: "focalLengthSpecs", label: "Focal length specs", type: "structured" }
+];
 
 const state = {
   lenses: [],
@@ -45,6 +78,14 @@ const state = {
   },
   mode: "cards",
   activeQuickChip: "",
+  activeLensId: "",
+  editingLensId: "",
+  drawerMessage: null,
+  admin: {
+    client: null,
+    isAdmin: false,
+    checking: false
+  },
   loadError: "",
   libraryStatus: {
     discoveredJsonFiles: 0,
@@ -67,6 +108,9 @@ document.addEventListener("DOMContentLoaded", () => {
 async function init() {
   cacheEls();
   bindEvents();
+  initAdminSession().catch(() => {
+    state.admin.isAdmin = false;
+  });
 
   const library = await loadLensLibrary();
   state.lenses = library.lenses;
@@ -168,10 +212,71 @@ function bindEvents() {
     }
   });
 
+  els.drawerContent.addEventListener("click", handleDrawerAction);
+  els.drawerContent.addEventListener("submit", handleDrawerSubmit);
+
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") {
       closeDrawer();
     }
+  });
+}
+
+async function initAdminSession() {
+  const url = window.LENSWIKI_SUPABASE_URL || "";
+  const anonKey = window.LENSWIKI_SUPABASE_ANON_KEY || "";
+  if (!window.supabase?.createClient || isMissingSupabaseConfig(url, anonKey)) {
+    return;
+  }
+
+  state.admin.client = window.supabase.createClient(url, anonKey);
+
+  const sessionResult = await safeSupabaseCall(() => state.admin.client.auth.getSession());
+  if (sessionResult.data?.session?.user) {
+    await verifyLensWikiAdmin(sessionResult.data.session.user);
+  }
+
+  state.admin.client.auth.onAuthStateChange((_event, session) => {
+    if (session?.user) {
+      verifyLensWikiAdmin(session.user);
+      return;
+    }
+
+    state.admin.isAdmin = false;
+    rerenderActiveLens();
+  });
+}
+
+async function verifyLensWikiAdmin(user) {
+  if (!state.admin.client || !user?.id) return false;
+  state.admin.checking = true;
+
+  const { data, error } = await safeSupabaseCall(() =>
+    state.admin.client
+      .from("lenswiki_admins")
+      .select("user_id")
+      .eq("user_id", user.id)
+      .maybeSingle()
+  );
+
+  state.admin.isAdmin = !error && Boolean(data?.user_id);
+  state.admin.checking = false;
+  rerenderActiveLens();
+  return state.admin.isAdmin;
+}
+
+async function safeSupabaseCall(callback) {
+  try {
+    return await callback();
+  } catch (error) {
+    return { data: null, error };
+  }
+}
+
+function isMissingSupabaseConfig(url, anonKey) {
+  return [url, anonKey].some((value) => {
+    const normalized = safeText(value);
+    return !normalized || normalized.includes("YOUR_SUPABASE_");
   });
 }
 
@@ -652,6 +757,9 @@ function openLens(id) {
   const lens = state.lenses.find((item) => item.id === id);
   if (!lens) return;
 
+  state.activeLensId = id;
+  state.editingLensId = "";
+  state.drawerMessage = null;
   els.drawerContent.replaceChildren(renderLensDetails(lens));
   els.detailDrawer.classList.add("is-open");
   els.detailDrawer.setAttribute("aria-hidden", "false");
@@ -662,10 +770,55 @@ function closeDrawer() {
   els.detailDrawer.classList.remove("is-open");
   els.detailDrawer.setAttribute("aria-hidden", "true");
   document.body.classList.remove("drawer-open");
+  state.activeLensId = "";
+  state.editingLensId = "";
+  state.drawerMessage = null;
+}
+
+function rerenderActiveLens() {
+  if (!state.activeLensId || els.detailDrawer.getAttribute("aria-hidden") === "true") return;
+  const lens = state.lenses.find((item) => item.id === state.activeLensId);
+  if (!lens) return;
+  els.drawerContent.replaceChildren(
+    state.editingLensId === lens.id ? renderLensEditForm(lens) : renderLensDetails(lens)
+  );
+}
+
+function handleDrawerAction(event) {
+  const action = event.target.closest("[data-drawer-action]");
+  if (!action) return;
+
+  if (action.dataset.drawerAction === "edit-lens") {
+    const lens = getActiveLens();
+    if (!lens || !state.admin.isAdmin) return;
+    state.editingLensId = lens.id;
+    state.drawerMessage = null;
+    rerenderActiveLens();
+  }
+
+  if (action.dataset.drawerAction === "cancel-edit") {
+    state.editingLensId = "";
+    state.drawerMessage = null;
+    rerenderActiveLens();
+  }
+}
+
+function handleDrawerSubmit(event) {
+  if (!event.target.matches("#lensEditForm")) return;
+  event.preventDefault();
+  saveLensEdits(event.target).catch(() => {
+    state.drawerMessage = { tone: "error", text: "Could not save lens. Please try again." };
+    rerenderActiveLens();
+  });
+}
+
+function getActiveLens() {
+  return state.lenses.find((item) => item.id === state.activeLensId);
 }
 
 function renderLensDetails(lens) {
   const fragment = document.createDocumentFragment();
+  appendIf(fragment, createDrawerMessage());
   const header = document.createElement("header");
   header.className = "drawer-title";
   header.innerHTML = `
@@ -676,6 +829,11 @@ function renderLensDetails(lens) {
       ${lens.importance ? `<span class="importance-pill ${escapeHtml(lens.importance)}">${escapeHtml(lens.importance)}</span>` : ""}
       ${lens.confidence ? `<span class="confidence ${escapeHtml(confidenceClass(lens.confidence))}">${escapeHtml(lens.confidence)}</span>` : ""}
     </div>
+    ${state.admin.isAdmin ? `
+      <div class="admin-lens-actions">
+        <button class="secondary-button small" type="button" data-drawer-action="edit-lens">Update lens</button>
+      </div>
+    ` : ""}
   `;
   fragment.append(header);
 
@@ -708,6 +866,163 @@ function renderLensDetails(lens) {
   fragment.append(createCorrectionFeedbackSection(lens));
 
   return fragment;
+}
+
+function renderLensEditForm(lens) {
+  const form = document.createElement("form");
+  form.className = "lens-edit-form";
+  form.id = "lensEditForm";
+  form.dataset.lensId = lens.id;
+  form.innerHTML = `
+    <header class="drawer-title edit-title">
+      <p class="eyebrow">Update lens</p>
+      <h2 id="drawerTitle">${escapeHtml(lens.name)}</h2>
+      <div class="admin-lens-actions">
+        <button class="primary-button small" type="submit">Save changes</button>
+        <button class="ghost-button small" type="button" data-drawer-action="cancel-edit">Cancel</button>
+      </div>
+    </header>
+    <div class="edit-grid">
+      ${ADMIN_EDIT_FIELDS.map((field) => renderEditField(lens, field)).join("")}
+    </div>
+  `;
+  return form;
+}
+
+function renderEditField(lens, field) {
+  const value = serializeEditValue(lens[field.key], field.type);
+  if (field.type === "checkbox") {
+    return `
+      <label class="edit-field edit-field-checkbox">
+        <input name="${escapeHtml(field.key)}" type="checkbox" ${lens[field.key] ? "checked" : ""}>
+        <span>${escapeHtml(field.label)}</span>
+      </label>
+    `;
+  }
+
+  if (field.type === "textarea" || field.type === "lines" || field.type === "structured") {
+    const rows = field.type === "structured" ? 8 : 4;
+    return `
+      <label class="edit-field ${field.type === "textarea" || field.type === "structured" ? "edit-field-wide" : ""}">
+        <span>${escapeHtml(field.label)}</span>
+        <textarea name="${escapeHtml(field.key)}" rows="${rows}">${escapeHtml(value)}</textarea>
+        ${getEditHint(field)}
+      </label>
+    `;
+  }
+
+  return `
+    <label class="edit-field">
+      <span>${escapeHtml(field.label)}</span>
+      <input name="${escapeHtml(field.key)}" type="${field.type === "number" ? "number" : "text"}" value="${escapeHtml(value)}">
+      ${getEditHint(field)}
+    </label>
+  `;
+}
+
+function getEditHint(field) {
+  if (field.type === "list") {
+    return '<small>Use comma-separated values.</small>';
+  }
+  if (field.type === "lines") {
+    return '<small>Use one item per line.</small>';
+  }
+  if (field.type === "structured") {
+    return '<small>Use JSON for structured entries, or one item per line for simple text.</small>';
+  }
+  return "";
+}
+
+function createDrawerMessage() {
+  if (!state.drawerMessage) return null;
+  const message = document.createElement("p");
+  message.className = `drawer-message ${state.drawerMessage.tone || ""}`.trim();
+  message.textContent = state.drawerMessage.text;
+  return message;
+}
+
+async function saveLensEdits(form) {
+  const lens = getActiveLens();
+  if (!lens || !state.admin.isAdmin || !state.admin.client) return;
+
+  const submitButton = form.querySelector('button[type="submit"]');
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Saving...";
+  }
+
+  const updatedLens = buildUpdatedLensFromForm(lens, form);
+  const saveResult = await saveLensToSupabase(updatedLens);
+
+  if (saveResult.error) {
+    state.drawerMessage = { tone: "error", text: "Could not save lens. Please try again." };
+    rerenderActiveLens();
+    return;
+  }
+
+  const normalized = normalizeLens(updatedLens, updatedLens.fileName || lens.fileName || lens.sourceFile);
+  replaceLens(normalized);
+  state.activeLensId = normalized.id;
+  state.editingLensId = "";
+  state.drawerMessage = { tone: "success", text: "Lens updated." };
+  renderAll();
+  rerenderActiveLens();
+}
+
+async function saveLensToSupabase(lens) {
+  const existing = await safeSupabaseCall(() =>
+    state.admin.client
+      .from("lenswiki_records")
+      .select("status")
+      .eq("id", lens.id)
+      .maybeSingle()
+  );
+  const status = existing.data?.status || "draft";
+
+  return safeSupabaseCall(() =>
+    state.admin.client
+      .from("lenswiki_records")
+      .upsert({
+        id: lens.id,
+        slug: lens.slug || slugify(lens.id),
+        name: lens.name,
+        manufacturer: lens.manufacturer || null,
+        year_introduced: lens.yearIntroduced ? String(lens.yearIntroduced) : null,
+        status,
+        confidence: lens.confidence || null,
+        data: lens,
+        updated_at: new Date().toISOString()
+      }, { onConflict: "id" })
+      .select("id")
+      .single()
+  );
+}
+
+function buildUpdatedLensFromForm(lens, form) {
+  const updated = { ...toExportLens(lens) };
+  const formData = new FormData(form);
+
+  ADMIN_EDIT_FIELDS.forEach((field) => {
+    if (field.type === "checkbox") {
+      updated[field.key] = formData.has(field.key);
+      return;
+    }
+
+    const rawValue = safeText(formData.get(field.key));
+    updated[field.key] = parseEditValue(rawValue, field.type, field.key);
+  });
+
+  updated.id = lens.id;
+  updated.slug = updated.slug || lens.slug || slugify(lens.id);
+  updated.fileName = lens.fileName || lens.sourceFile || `${updated.slug}.json`;
+  return updated;
+}
+
+function replaceLens(updatedLens) {
+  const index = state.lenses.findIndex((lens) => lens.id === updatedLens.id);
+  if (index === -1) return;
+  state.lenses.splice(index, 1, updatedLens);
+  state.lenses.sort(sortByYearThenImportance);
 }
 
 function appendIf(fragment, node) {
@@ -1289,6 +1604,61 @@ function formatValue(value) {
   if (value && typeof value === "object") return formatListItem(value);
   if (value === null || value === undefined || value === "") return "";
   return String(value);
+}
+
+function serializeEditValue(value, type) {
+  if (!hasValue(value)) return "";
+  if (type === "list") {
+    return asArray(value).map(formatListItem).join(", ");
+  }
+  if (type === "lines") {
+    return asArray(value).map(formatListItem).join("\n");
+  }
+  if (type === "structured") {
+    const items = asArray(value);
+    if (items.some((item) => item && typeof item === "object")) {
+      return JSON.stringify(items, null, 2);
+    }
+    return items.map(formatListItem).join("\n");
+  }
+  return formatValue(value);
+}
+
+function parseEditValue(value, type, key) {
+  if (type === "number") {
+    return numberOrNull(value);
+  }
+  if (type === "list") {
+    return splitCommaList(value);
+  }
+  if (type === "lines") {
+    return splitLines(value);
+  }
+  if (type === "structured") {
+    return parseStructuredEditValue(value, key);
+  }
+  return value;
+}
+
+function parseStructuredEditValue(value, key) {
+  if (!value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [parsed];
+  } catch (_error) {
+    if (["sources", "youtubeEmbeds", "relatedLensIds"].includes(key)) {
+      return splitLines(value);
+    }
+    return splitLines(value);
+  }
+}
+
+function splitCommaList(value) {
+  return safeText(value).split(",").map((item) => item.trim()).filter(Boolean);
+}
+
+function splitLines(value) {
+  return safeText(value).split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
 }
 
 function formatListItem(item) {
