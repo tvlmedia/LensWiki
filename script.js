@@ -34,6 +34,7 @@ const NORMALIZED_ARRAY_FIELDS = new Set([
   "mounts",
   "focalLengths",
   "tStops",
+  "formatCoverageNotes",
   "characteristics",
   "type",
   "strengths",
@@ -44,6 +45,8 @@ const NORMALIZED_ARRAY_FIELDS = new Set([
   "famousUses",
   "focalLengthSpecs"
 ]);
+const COMMA_ARRAY_FIELDS = new Set(["mounts", "focalLengths", "tStops", "type"]);
+const LINE_ARRAY_FIELDS = new Set(["strengths", "weaknesses", "characteristics", "closeFocus", "formatCoverageNotes"]);
 const REHOUSING_FIELD_KEYS = new Set([
   "donorLens",
   "rehousingInfo",
@@ -70,12 +73,13 @@ const ADMIN_EDIT_FIELDS = [
   { key: "country", label: "Country", type: "text" },
   { key: "factoryLocation", label: "Factory / location", type: "text" },
   { key: "type", label: "Type", type: "list" },
-  { key: "characteristics", label: "Tags / character", type: "list" },
+  { key: "characteristics", label: "Tags / character", type: "lines" },
   { key: "coverage", label: "Coverage", type: "text" },
+  { key: "formatCoverageNotes", label: "Format coverage notes", type: "lines" },
   { key: "mounts", label: "Mounts", type: "list" },
   { key: "focalLengths", label: "Focal lengths", type: "list" },
   { key: "tStops", label: "T-stops / F-stops", type: "list" },
-  { key: "closeFocus", label: "Close focus", type: "list" },
+  { key: "closeFocus", label: "Close focus", type: "lines" },
   { key: "strengths", label: "Strengths", type: "lines" },
   { key: "weaknesses", label: "Weaknesses", type: "lines" },
   { key: "seriesHistory", label: "History / series history", type: "lines" },
@@ -535,7 +539,7 @@ function warnIfIdDoesNotMatchFile(id, fileName) {
 }
 
 function normalizeLens(lens, fileName) {
-  const type = normalizeArrayField(lens.type, { fieldName: "type" });
+  const type = normalizeArrayField(lens.type, getArrayFieldOptions("type"));
   const hasExplicitRehousedFlag = hasOwn(lens, "isRehoused");
   const timelineCategory = safeText(lens.timelineCategory);
   const cardLabel = safeText(lens.cardLabel)
@@ -567,12 +571,12 @@ function normalizeLens(lens, fileName) {
     cardLabel,
     publicSummary: safeText(lens.publicSummary),
     coverage: safeText(lens.coverage),
-    formatCoverageNotes: asArray(lens.formatCoverageNotes),
-    mounts: normalizeArrayField(lens.mounts),
+    formatCoverageNotes: normalizeArrayField(lens.formatCoverageNotes, getArrayFieldOptions("formatCoverageNotes")),
+    mounts: normalizeArrayField(lens.mounts, getArrayFieldOptions("mounts")),
     seriesHistory: asArray(lens.seriesHistory),
-    focalLengths: normalizeArrayField(lens.focalLengths),
-    tStops: normalizeArrayField(lens.tStops),
-    closeFocus: normalizeArrayField(lens.closeFocus),
+    focalLengths: normalizeArrayField(lens.focalLengths, getArrayFieldOptions("focalLengths")),
+    tStops: normalizeArrayField(lens.tStops, getArrayFieldOptions("tStops")),
+    closeFocus: normalizeArrayField(lens.closeFocus, getArrayFieldOptions("closeFocus")),
     focalLengthSpecs: normalizeArrayField(lens.focalLengthSpecs, { fieldName: "focalLengthSpecs", preserveObjects: true }),
     opticalFormula: safeText(lens.opticalFormula),
     elements: numberOrNull(lens.elements),
@@ -587,9 +591,9 @@ function normalizeLens(lens, fileName) {
     rehousingGeneration: safeText(lens.rehousingGeneration),
     rehousingNotes: safeText(lens.rehousingNotes),
     lookSummary: safeText(lens.lookSummary),
-    characteristics: normalizeArrayField(lens.characteristics),
-    strengths: normalizeArrayField(lens.strengths),
-    weaknesses: normalizeArrayField(lens.weaknesses),
+    characteristics: normalizeArrayField(lens.characteristics, getArrayFieldOptions("characteristics")),
+    strengths: normalizeArrayField(lens.strengths, getArrayFieldOptions("strengths")),
+    weaknesses: normalizeArrayField(lens.weaknesses, getArrayFieldOptions("weaknesses")),
     famousUses: normalizeArrayField(lens.famousUses, { fieldName: "famousUses", preserveObjects: true }),
     youtubeEmbeds: normalizeYouTubeSamples(lens.youtubeEmbeds),
     imageUrls: asArray(lens.imageUrls),
@@ -2311,7 +2315,7 @@ function parseBoolean(value) {
 }
 
 function typeSuggestsRehoused(type) {
-  return normalizeArrayField(type, { fieldName: "type" }).some((item) => {
+  return normalizeArrayField(type, getArrayFieldOptions("type")).some((item) => {
     const normalized = normalizeMatchText(item);
     return normalized.compact.includes("rehoused") || normalized.compact.includes("rehousedcine");
   });
@@ -2407,10 +2411,10 @@ function serializeEditValue(value, type, key = "") {
     return normalizeYouTubeSamples(value).join("\n");
   }
   if (type === "list") {
-    return normalizeArrayField(value).map(formatListItem).join(", ");
+    return normalizeArrayField(value, getArrayFieldOptions(key, type)).map(formatListItem).join(", ");
   }
   if (type === "lines") {
-    return normalizeArrayField(value).map(formatListItem).join("\n");
+    return normalizeArrayField(value, getArrayFieldOptions(key, type)).map(formatListItem).join("\n");
   }
   if (type === "structured") {
     const items = asArray(value);
@@ -2430,11 +2434,7 @@ function parseEditValue(value, type, key) {
     return normalizeYouTubeSamples(value);
   }
   if (NORMALIZED_ARRAY_FIELDS.has(key)) {
-    return normalizeArrayField(value, {
-      fieldName: key,
-      separator: type === "lines" ? "lines" : "",
-      preserveObjects: type === "structured"
-    });
+    return normalizeArrayField(value, getArrayFieldOptions(key, type));
   }
   if (type === "list") {
     return splitCommaList(value);
@@ -2511,7 +2511,7 @@ function prepareDraftPatch(patchObject, currentValues, fields) {
 function normalizeLensPatchObject(patchObject) {
   const normalized = { ...patchObject };
   if (!hasOwn(normalized, "isRehoused") && hasOwn(normalized, "type")) {
-    const type = normalizeArrayField(normalized.type, { fieldName: "type" });
+    const type = normalizeArrayField(normalized.type, getArrayFieldOptions("type"));
     if (typeSuggestsRehoused(type)) {
       normalized.isRehoused = true;
     }
@@ -2524,8 +2524,7 @@ function serializePatchValue(value, field) {
   if (field.type === "number") return hasValue(value) ? String(value) : "";
   if (NORMALIZED_ARRAY_FIELDS.has(field.key)) {
     const normalized = normalizeArrayField(value, {
-      fieldName: field.key,
-      separator: field.type === "lines" ? "lines" : "",
+      ...getArrayFieldOptions(field.key, field.type),
       preserveObjects: field.type === "structured"
     });
     return serializeEditValue(normalized, field.type, field.key);
@@ -2558,7 +2557,7 @@ function parseStructuredEditValue(value, key) {
 }
 
 function splitCommaList(value) {
-  return normalizeArrayField(value);
+  return normalizeArrayField(value, { separator: "commas" });
 }
 
 function splitLines(value) {
@@ -2594,6 +2593,9 @@ function getYouTubeSample(value) {
 
   const iframeSrc = raw.match(/\bsrc=["']([^"']+)["']/i)?.[1];
   let text = iframeSrc || raw;
+  if (text.startsWith("//")) {
+    text = `https:${text}`;
+  }
   if (/^(www\.|m\.)?youtube\.com|^youtu\.be/i.test(text)) {
     text = `https://${text}`;
   }
@@ -2639,6 +2641,20 @@ function buildYouTubeSample(id, label = "") {
   };
 }
 
+function getArrayFieldOptions(fieldName = "", fieldType = "") {
+  return {
+    fieldName,
+    separator: getArrayFieldSeparator(fieldName, fieldType),
+    preserveObjects: fieldType === "structured"
+  };
+}
+
+function getArrayFieldSeparator(fieldName = "", fieldType = "") {
+  if (fieldType === "lines" || LINE_ARRAY_FIELDS.has(fieldName)) return "lines";
+  if (fieldType === "list" || COMMA_ARRAY_FIELDS.has(fieldName)) return "commas";
+  return "";
+}
+
 function normalizeArrayField(value, options = {}) {
   if (Array.isArray(value)) {
     if (options.preserveObjects && value.some((item) => item && typeof item === "object")) {
@@ -2679,7 +2695,8 @@ function normalizeArrayField(value, options = {}) {
     .replace(/\]+$/, "")
     .replace(/,\s*$/g, "");
 
-  const separator = options.separator === "lines" ? /\r?\n/ : /,|\r?\n/;
+  const separatorMode = options.separator || getArrayFieldSeparator(options.fieldName);
+  const separator = separatorMode === "lines" ? /\r?\n/ : /,|\r?\n/;
   return unwrapped
     .split(separator)
     .map(cleanArrayItem)
@@ -2707,11 +2724,7 @@ function cleanLensArrayFields(lens) {
         return;
       }
       const field = getAdminEditField(fieldName);
-      cleaned[fieldName] = normalizeArrayField(cleaned[fieldName], {
-        fieldName,
-        separator: field?.type === "lines" ? "lines" : "",
-        preserveObjects: field?.type === "structured"
-      });
+      cleaned[fieldName] = normalizeArrayField(cleaned[fieldName], getArrayFieldOptions(fieldName, field?.type));
     }
   });
   return cleaned;
