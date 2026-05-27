@@ -654,7 +654,6 @@ function renderLensDetails(lens) {
   fragment.append(header);
 
   const factFields = [
-    ["Source file", lens.sourceFile],
     ["Year introduced", formatYear(lens)],
     ["Production years", lens.productionYears],
     ["Designer", lens.designer],
@@ -668,20 +667,16 @@ function renderLensDetails(lens) {
     ["T-stops / f-stops", lens.tStops],
     ["Optical formula", lens.opticalFormula],
     ["Elements / groups", formatElementsGroups(lens)],
-    ["Coating", lens.coating],
-    ["Design family", lens.designFamily],
-    ["Donor lens", lens.donorLens],
+    ["Donor lens", shouldShowDonorLens(lens) ? lens.donorLens : ""],
     ["Rehousing info", lens.rehousingInfo],
-    ["Library status", lens.libraryStatus],
     ["Confidence", lens.confidence]
   ];
 
-  appendIf(fragment, createDetailSection("Record fields", createFieldGrid(factFields)));
+  appendIf(fragment, createDetailSection("Key specs", createFieldGrid(factFields)));
   appendIf(fragment, createListSection("Look summary", lens.lookSummary ? [lens.lookSummary] : []));
   appendIf(fragment, createListSection("Series history", lens.seriesHistory));
   appendIf(fragment, createFocalLengthSpecsSection(lens.focalLengthSpecs));
   appendIf(fragment, createListSection("Format coverage notes", lens.formatCoverageNotes));
-  appendIf(fragment, createListSection("Close focus", lens.closeFocus));
   appendIf(fragment, createListSection("Characteristics", lens.characteristics));
   appendIf(fragment, createListSection("Strengths", lens.strengths));
   appendIf(fragment, createListSection("Weaknesses", lens.weaknesses));
@@ -990,6 +985,20 @@ function getCardCoverage(lens) {
   const coverage = safeText(lens.coverage);
   if (!coverage) return "";
   return coverage.length > 74 ? `${coverage.slice(0, 71).trim()}...` : coverage;
+}
+
+function shouldShowDonorLens(lens) {
+  if (!hasValue(lens.donorLens)) return false;
+
+  const rehousingEvidence = [
+    lens.rehousingInfo,
+    lens.lineage,
+    lens.timelineCategory,
+    lens.cardLabel,
+    lens.type
+  ].flat().filter(Boolean).join(" ").toLowerCase();
+
+  return rehousingEvidence.includes("rehous");
 }
 
 function formatArchiveMakerLine(lens) {
