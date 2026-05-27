@@ -4,16 +4,17 @@
     accessCopy: document.querySelector("#accessCopy"),
     accessKicker: document.querySelector("#accessKicker"),
     accessTitle: document.querySelector("#accessTitle"),
+    adminView: document.querySelector("#adminView"),
     configNotice: document.querySelector("#configNotice"),
     dashboard: document.querySelector("#adminDashboard"),
     dashboardStatus: document.querySelector("#dashboardStatus"),
     emailInput: document.querySelector("#emailInput"),
     loginButton: document.querySelector("#loginButton"),
     loginForm: document.querySelector("#loginForm"),
+    loginView: document.querySelector("#loginView"),
     logoutButton: document.querySelector("#logoutButton"),
     passwordInput: document.querySelector("#passwordInput"),
     recordsList: document.querySelector("#supabaseRecordsList"),
-    sessionPanel: document.querySelector("#sessionPanel"),
     statusMessage: document.querySelector("#statusMessage"),
     supabaseRecordCount: document.querySelector("#supabaseRecordCount"),
   };
@@ -33,21 +34,20 @@
 
     if (isMissingConfig(config)) {
       els.configNotice.hidden = false;
-      els.configNotice.textContent = "Supabase config missing.";
-      setLoginDisabled(true);
-      showLoggedOut();
+      els.configNotice.textContent = "Admin configuration missing.";
+      showLoginView({ disabled: true });
       return;
     }
 
     if (!isValidSupabaseUrl(config.url)) {
-      showStatus("Supabase URL is invalid.", "error");
-      setLoginDisabled(true);
+      showStatus("Admin configuration is invalid.", "error");
+      showLoginView({ disabled: true });
       return;
     }
 
     if (!window.supabase?.createClient) {
-      showStatus("Supabase client could not load. Check your connection and CDN access.", "error");
-      setLoginDisabled(true);
+      showStatus("Admin service could not load. Check your connection and try again.", "error");
+      showLoginView({ disabled: true });
       return;
     }
 
@@ -57,7 +57,7 @@
     if (sessionResult.error) {
       showStatus(getFriendlySupabaseError(sessionResult.error), "error");
       setLoginDisabled(false);
-      showLoggedOut();
+      showLoginView();
       return;
     }
 
@@ -65,7 +65,7 @@
     if (data?.session) {
       await restoreUser();
     } else {
-      showLoggedOut();
+      showLoginView();
       clearStatus();
     }
 
@@ -73,7 +73,7 @@
       if (session?.user) {
         verifyAdminAccess(session.user);
       } else {
-        showLoggedOut();
+        showLoginView();
       }
     });
   }
@@ -103,19 +103,19 @@
   async function handleLogout() {
     clearStatus();
     await safeSupabaseCall(() => supabaseClient.auth.signOut());
-    showLoggedOut();
+    showLoginView();
   }
 
   async function restoreUser() {
     const { data, error } = await safeSupabaseCall(() => supabaseClient.auth.getUser());
     if (error) {
       showStatus(getFriendlySupabaseError(error), "error");
-      showLoggedOut();
+      showLoginView();
       return;
     }
 
     if (!data?.user) {
-      showLoggedOut();
+      showLoginView();
       return;
     }
 
@@ -124,12 +124,12 @@
 
   async function verifyAdminAccess(user) {
     if (!user) {
-      showLoggedOut();
+      showLoginView();
       return;
     }
 
-    showLoggedIn();
-    showAccessState("checking", "Checking admin access...", "Looking for this user in LensWiki admins.");
+    showAdminView();
+    showAccessState("checking", "Checking admin access...", "Please wait while access is verified.");
 
     const { data, error } = await safeSupabaseCall(() =>
       supabaseClient
@@ -144,7 +144,7 @@
       showAccessState(
         "denied",
         "Could not verify admin access.",
-        `${getFriendlySupabaseError(error)} Check the LensWiki migration and RLS policies.`
+        "Please try again or contact the site owner."
       );
       return;
     }
@@ -163,27 +163,30 @@
     showAccessState(
       "denied",
       "You are logged in, but this account is not authorized for LensWiki admin.",
-      "Ask a project admin to add your Supabase Auth user id to public.lenswiki_admins."
+      "Contact the site owner if you need curator access."
     );
   }
 
-  function showLoggedIn() {
+  function showAdminView() {
+    els.loginView.hidden = true;
     els.loginForm.hidden = true;
-    els.sessionPanel.hidden = false;
+    els.adminView.hidden = false;
   }
 
-  function showLoggedOut() {
+  function showLoginView(options = {}) {
+    const disabled = options.disabled ?? isMissingConfig(config);
+    els.loginView.hidden = false;
     els.loginForm.hidden = false;
-    els.sessionPanel.hidden = true;
+    els.adminView.hidden = true;
     els.accessCard.hidden = true;
     hideDashboard();
-    setLoginDisabled(isMissingConfig(config));
+    setLoginDisabled(disabled);
   }
 
   async function loadAdminDashboard() {
     els.dashboard.hidden = false;
     els.supabaseRecordCount.textContent = "Loading...";
-    els.dashboardStatus.textContent = "Loading lens records from Supabase...";
+    els.dashboardStatus.textContent = "Loading lens records...";
     els.recordsList.hidden = true;
     els.recordsList.innerHTML = "";
 
@@ -197,7 +200,7 @@
 
     if (error) {
       els.supabaseRecordCount.textContent = "Unavailable";
-      els.dashboardStatus.textContent = `Could not load Supabase lens records. ${getFriendlySupabaseError(error)}`;
+      els.dashboardStatus.textContent = "Could not load lens records. Please try again or contact the site owner.";
       return;
     }
 
@@ -206,7 +209,7 @@
     els.supabaseRecordCount.textContent = `${total} ${total === 1 ? "record" : "records"}`;
 
     if (records.length === 0) {
-      els.dashboardStatus.textContent = "No Supabase lens records yet. Import existing JSON records next.";
+      els.dashboardStatus.textContent = "No lens records yet. Import existing JSON records next.";
       return;
     }
 
@@ -234,7 +237,7 @@
   function showAccessState(state, title, copy) {
     els.accessCard.hidden = false;
     els.accessCard.dataset.state = state;
-    els.accessKicker.textContent = state === "confirmed" ? "Access granted" : "Access check";
+    els.accessKicker.textContent = state === "confirmed" ? "Admin session active" : "Access check";
     els.accessTitle.textContent = title;
     els.accessCopy.textContent = copy;
   }
@@ -284,7 +287,7 @@
   function getFriendlySupabaseError(error) {
     const message = String(error?.message || error || "Unknown Supabase error");
     if (message.toLowerCase().includes("failed to fetch") || error instanceof TypeError) {
-      return "Could not reach Supabase. Check project URL, publishable key, browser cache or Supabase project status.";
+      return "Could not reach the admin service. Check your connection or try again later.";
     }
 
     return message;

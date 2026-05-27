@@ -143,7 +143,6 @@ code {
 
 .notice,
 .access-card,
-.session-panel,
 .admin-dashboard {
   margin-bottom: 16px;
   padding: 13px 14px;
@@ -195,7 +194,8 @@ button:disabled {
 }
 
 .primary-button,
-.secondary-button {
+.secondary-button,
+.danger-button {
   min-height: 42px;
   padding: 0 15px;
   display: inline-flex;
@@ -218,14 +218,6 @@ button:disabled {
   border-color: var(--line);
 }
 
-.session-panel {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.session-panel span,
 .access-kicker {
   display: block;
   color: var(--subtle);
@@ -233,9 +225,10 @@ button:disabled {
   font-weight: 760;
 }
 
-.session-panel strong {
-  display: block;
-  margin-top: 3px;
+.danger-button {
+  color: #ffe0e6;
+  background: rgba(232, 92, 117, 0.08);
+  border-color: rgba(232, 92, 117, 0.26);
 }
 
 .access-card {
@@ -352,6 +345,14 @@ button:disabled {
   font-size: 0.82rem;
 }
 
+.dashboard-footer {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
 @media (max-width: 640px) {
   .admin-topbar {
     align-items: flex-start;
@@ -363,9 +364,12 @@ button:disabled {
     padding-top: 18px;
   }
 
-  .session-panel {
-    align-items: stretch;
-    flex-direction: column;
+  .dashboard-footer {
+    justify-content: stretch;
+  }
+
+  .dashboard-footer button {
+    width: 100%;
   }
 
   .dashboard-head,
