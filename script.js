@@ -1810,14 +1810,6 @@ function createRehousingSection(lens) {
   const wrapper = document.createElement("div");
   wrapper.className = "rehousing-block";
 
-  if (shouldShowDonorLens(lens)) {
-    const donorSection = document.createElement("div");
-    donorSection.className = "rehousing-subsection";
-    donorSection.innerHTML = "<h4>Donor optics</h4>";
-    donorSection.append(createInlineChipList(splitDonorOptics(lens.donorLens)));
-    wrapper.append(donorSection);
-  }
-
   appendIf(wrapper, createDonorGlassProductionYearsSection(lens));
   appendIf(wrapper, createOriginalOpticsYearsSection(lens));
 
@@ -1933,10 +1925,6 @@ function createParagraphBlock(content) {
     wrapper.append(paragraph);
   });
   return wrapper;
-}
-
-function splitDonorOptics(value) {
-  return normalizeArrayField(value).flatMap((item) => safeText(item).split(/\s*,\s*/)).map((item) => item.trim()).filter(Boolean);
 }
 
 function getMechanicalRehousingText(lens) {
@@ -2650,12 +2638,6 @@ function shouldShowRehousingSection(lens) {
   }
   if (lens._isRehousedExplicit) return false;
   return (hasValue(lens.donorLens) || hasValue(lens.rehousingInfo) || hasDonorGlassProductionYears(lens) || hasOriginalOpticsYears(lens)) && hasRehousingEvidence(lens);
-}
-
-function shouldShowDonorLens(lens) {
-  if (!shouldShowRehousingSection(lens)) return false;
-  if (!hasValue(lens.donorLens)) return false;
-  return lens.isRehoused === true || hasRehousingEvidence(lens);
 }
 
 function shouldShowRehousingInfo(lens) {
