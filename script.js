@@ -30,6 +30,7 @@ const FORMAT_FILTERS = [
   { value: "full-frame", label: "Full Frame", terms: ["full frame", "full-frame", "ff", "stills-derived", "still lens derived"] },
   { value: "65mm-large-format", label: "65mm / Large Format", terms: ["65mm", "large format", "large-format", "lf", "alexa 65", "vistavision"] }
 ];
+const VIMEO_THUMB_CACHE = new Map();
 const NORMALIZED_ARRAY_FIELDS = new Set([
   "mounts",
   "focalLengths",
@@ -2736,17 +2737,10 @@ function createYoutubeSection(lensOrSamples) {
     const thumb = document.createElement("span");
     thumb.className = "video-card-thumb youtube-thumb";
     if (sample.thumbnailUrl) {
-      const image = document.createElement("img");
-      image.src = sample.thumbnailUrl;
-      image.alt = "Sample footage thumbnail";
-      image.loading = "lazy";
-      thumb.append(image);
+      renderVideoThumbnailImage(thumb, sample.thumbnailUrl, sample.platform);
     } else {
-      thumb.classList.add("is-video-placeholder");
-      const placeholder = document.createElement("span");
-      placeholder.className = "video-placeholder-label";
-      placeholder.textContent = sample.platform || "Sample footage";
-      thumb.append(placeholder);
+      renderVideoPlaceholder(thumb, sample.platform || "Sample footage");
+      hydrateVimeoThumbnail(thumb, sample);
     }
 
     card.append(thumb);
@@ -2764,6 +2758,36 @@ function createYoutubeSection(lensOrSamples) {
   });
 
   return createDetailSection("Sample footage", grid);
+}
+
+function renderVideoThumbnailImage(thumb, thumbnailUrl, platform = "") {
+  thumb.textContent = "";
+  thumb.classList.remove("is-video-placeholder");
+  const image = document.createElement("img");
+  image.src = thumbnailUrl;
+  image.alt = "Sample footage thumbnail";
+  image.loading = "lazy";
+  image.addEventListener("error", () => {
+    renderVideoPlaceholder(thumb, platform || "Sample footage");
+  }, { once: true });
+  thumb.append(image);
+}
+
+function renderVideoPlaceholder(thumb, label = "Sample footage") {
+  thumb.textContent = "";
+  thumb.classList.add("is-video-placeholder");
+  const placeholder = document.createElement("span");
+  placeholder.className = "video-placeholder-label";
+  placeholder.textContent = label;
+  thumb.append(placeholder);
+}
+
+function hydrateVimeoThumbnail(thumb, sample) {
+  if (safeText(sample.platform).toLowerCase() !== "vimeo" || !sample.id) return;
+  getVimeoThumbnail(sample.id).then((thumbnailUrl) => {
+    if (!thumbnailUrl || !thumb.isConnected) return;
+    renderVideoThumbnailImage(thumb, thumbnailUrl, sample.platform);
+  });
 }
 
 function createKnownUseSection(items) {
@@ -3825,6 +3849,7 @@ function normalizeVideoEmbed(item) {
     return buildVimeoSample(vimeoId, {
       label: metadata.label,
       platform: metadata.platform,
+      thumbnailUrl: metadata.thumbnailUrl,
       url: text,
       originalUrl: metadata.originalUrl
     });
@@ -4016,8 +4041,56 @@ function buildVimeoSample(id, options = {}) {
     url: options.url || `https://vimeo.com/${id}`,
     originalUrl: options.originalUrl || options.url || `https://vimeo.com/${id}`,
     embedUrl: `https://player.vimeo.com/video/${id}`,
-    thumbnailUrl: ""
+    thumbnailUrl: options.thumbnailUrl || getCachedVimeoThumbnail(id) || ""
   };
+}
+
+function getCachedVimeoThumbnail(videoId) {
+  const id = normalizeVimeoId(videoId);
+  if (!id) return "";
+  if (VIMEO_THUMB_CACHE.has(id)) return VIMEO_THUMB_CACHE.get(id);
+
+  try {
+    const cached = localStorage.getItem(getVimeoThumbCacheKey(id));
+    if (cached) {
+      VIMEO_THUMB_CACHE.set(id, cached);
+      return cached;
+    }
+  } catch (_error) {
+    // localStorage may be unavailable in private or restricted browser contexts.
+  }
+
+  return "";
+}
+
+async function getVimeoThumbnail(videoId) {
+  const id = normalizeVimeoId(videoId);
+  if (!id) return "";
+
+  const cached = getCachedVimeoThumbnail(id);
+  if (cached) return cached;
+
+  try {
+    const response = await fetch(`https://vimeo.com/api/oembed.json?url=${encodeURIComponent(`https://vimeo.com/${id}`)}`);
+    if (!response.ok) return "";
+    const data = await response.json();
+    const thumbnailUrl = normalizeMediaUrl(data.thumbnail_url);
+    if (!thumbnailUrl) return "";
+    VIMEO_THUMB_CACHE.set(id, thumbnailUrl);
+    try {
+      localStorage.setItem(getVimeoThumbCacheKey(id), thumbnailUrl);
+    } catch (_error) {
+      // Cache is optional; the card still renders with the fetched thumbnail.
+    }
+    return thumbnailUrl;
+  } catch (error) {
+    console.warn("Failed to load Vimeo thumbnail", error);
+    return "";
+  }
+}
+
+function getVimeoThumbCacheKey(videoId) {
+  return `vimeo-thumb-${videoId}`;
 }
 
 function getArrayFieldOptions(fieldName = "", fieldType = "") {
