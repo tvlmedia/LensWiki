@@ -2726,30 +2726,36 @@ function createYoutubeSection(lensOrSamples) {
   const grid = document.createElement("div");
   grid.className = "video-grid youtube-grid";
   samples.forEach((sample, index) => {
-    const card = document.createElement("article");
+    const card = document.createElement("a");
     card.className = "video-card youtube-card";
-    card.setAttribute("aria-label", sample.label ? `Sample footage: ${sample.label}` : `Sample footage ${index + 1}`);
+    card.href = sample.originalUrl || sample.url || sample.embedUrl;
+    card.target = "_blank";
+    card.rel = "noopener noreferrer";
+    card.setAttribute("aria-label", sample.label ? `Open ${sample.label}` : `Open sample footage ${index + 1}`);
 
-    const frameWrap = document.createElement("div");
-    frameWrap.className = "video-frame";
+    const thumb = document.createElement("span");
+    thumb.className = "video-card-thumb youtube-thumb";
+    if (sample.thumbnailUrl) {
+      const image = document.createElement("img");
+      image.src = sample.thumbnailUrl;
+      image.alt = "Sample footage thumbnail";
+      image.loading = "lazy";
+      thumb.append(image);
+    } else {
+      thumb.classList.add("is-video-placeholder");
+      const placeholder = document.createElement("span");
+      placeholder.className = "video-placeholder-label";
+      placeholder.textContent = sample.platform || "Sample footage";
+      thumb.append(placeholder);
+    }
 
-    const iframe = document.createElement("iframe");
-    iframe.src = sample.embedUrl;
-    iframe.title = sample.label || `${sample.platform || "Video"} sample footage ${index + 1}`;
-    iframe.loading = "lazy";
-    iframe.referrerPolicy = "strict-origin-when-cross-origin";
-    iframe.allowFullscreen = true;
-    iframe.setAttribute("allowfullscreen", "");
-    iframe.setAttribute("allow", getVideoIframeAllow(sample.platform));
-    frameWrap.append(iframe);
-
-    card.append(frameWrap);
+    card.append(thumb);
     if (sample.label || sample.platform) {
       const meta = document.createElement("span");
       meta.className = "youtube-meta";
       meta.innerHTML = `
-        ${sample.label ? `<span class="youtube-label">${escapeHtml(sample.label)}</span>` : ""}
-        ${sample.platform ? `<span class="youtube-platform">${escapeHtml(sample.platform)}</span>` : ""}
+        ${sample.label ? `<span class="video-card-title youtube-label">${escapeHtml(sample.label)}</span>` : ""}
+        ${sample.platform ? `<span class="video-card-platform youtube-platform">${escapeHtml(sample.platform)}</span>` : ""}
       `;
       card.append(meta);
     }
@@ -3809,6 +3815,7 @@ function normalizeVideoEmbed(item) {
       platform: metadata.platform,
       thumbnailUrl: metadata.thumbnailUrl,
       url: text,
+      originalUrl: metadata.originalUrl,
       start: getStartSeconds(item)
     });
   }
@@ -3818,7 +3825,8 @@ function normalizeVideoEmbed(item) {
     return buildVimeoSample(vimeoId, {
       label: metadata.label,
       platform: metadata.platform,
-      url: text
+      url: text,
+      originalUrl: metadata.originalUrl
     });
   }
 
@@ -3837,6 +3845,7 @@ function getVideoMetadata(value) {
 
   return {
     source: normalizeMediaUrl(value.embedUrl
+      || value.originalUrl
       || value.url
       || value.href
       || value.videoUrl
@@ -3849,6 +3858,7 @@ function getVideoMetadata(value) {
       || value.videoId
       || value.id
       || ""),
+    originalUrl: normalizeMediaUrl(value.originalUrl || value.url || value.href || value.videoUrl || value.link || value.watchUrl || value.embedUrl || ""),
     label: safeText(value.label || value.title || value.name),
     platform: safeText(value.platform || value.source || value.provider),
     thumbnailUrl: normalizeMediaUrl(value.thumbnailUrl || value.thumbnail || value.imageUrl || value.image || value.poster)
@@ -3980,8 +3990,7 @@ function buildYouTubeSample(id, options = {}) {
   const platform = options.platform || "YouTube";
   const start = normalizeStartSeconds(options.start);
   const generatedThumbnails = [
-    `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
-    `https://i.ytimg.com/vi/${id}/mqdefault.jpg`
+    `https://img.youtube.com/vi/${id}/hqdefault.jpg`
   ];
   const thumbnailUrls = options.thumbnailUrl
     ? [options.thumbnailUrl, ...generatedThumbnails]
@@ -3992,6 +4001,7 @@ function buildYouTubeSample(id, options = {}) {
     label: options.label || "",
     platform,
     url: options.url || `https://www.youtube.com/watch?v=${id}`,
+    originalUrl: options.originalUrl || options.url || `https://www.youtube.com/watch?v=${id}`,
     embedUrl: `https://www.youtube.com/embed/${id}${start ? `?start=${start}` : ""}`,
     thumbnailUrl: thumbnailUrls[0],
     thumbnailFallbackUrls: thumbnailUrls.slice(1)
@@ -4004,15 +4014,10 @@ function buildVimeoSample(id, options = {}) {
     label: options.label || "",
     platform: options.platform || "Vimeo",
     url: options.url || `https://vimeo.com/${id}`,
+    originalUrl: options.originalUrl || options.url || `https://vimeo.com/${id}`,
     embedUrl: `https://player.vimeo.com/video/${id}`,
     thumbnailUrl: ""
   };
-}
-
-function getVideoIframeAllow(platform = "") {
-  return safeText(platform).toLowerCase() === "vimeo"
-    ? "autoplay; fullscreen; picture-in-picture"
-    : "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share";
 }
 
 function getArrayFieldOptions(fieldName = "", fieldType = "") {
